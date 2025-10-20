@@ -55,8 +55,8 @@ class Word2VecService:
 
         print(f"Creating Word2Vec service with vocabulary size: {word_data['vocab_size']}")
         
-        # 모델 생성 (임베딩 차원 축소: 512 -> 128)
-        model = SkipGramModel(word_data['vocab_size'], emb_dimension=128)
+        # 모델 생성
+        model = SkipGramModel(word_data['vocab_size'], emb_dimension=300)
 
         # 데이터 로더 생성
         data_loader = MemoryDataLoader(
@@ -70,7 +70,7 @@ class Word2VecService:
         dataset = MemoryWord2vecDataset(data_loader, window_size=5)
 
         # 트레이너 생성
-        trainer = Word2VecTrainer(iterations=10, initial_lr=0.025, batch_size=128)
+        trainer = Word2VecTrainer(iterations=10, initial_lr=0.025, batch_size=300)
         
         return cls(doc_service, model, trainer, dataset, data_loader)
     

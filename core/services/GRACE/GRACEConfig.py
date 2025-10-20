@@ -58,6 +58,9 @@ class GRACEConfig:
     verbose: bool = True
     log_interval: int = 10  # epoch마다 로그 출력 간격
 
+    # === 재현성 설정 ===
+    random_seed: int = 42  # 재현성을 위한 랜덤 시드
+
     @classmethod
     def create_default(cls, csv_path: str, num_documents: int = 1000) -> 'GRACEConfig':
         """기본 설정으로 생성"""

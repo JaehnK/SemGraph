@@ -57,7 +57,7 @@ def create_default_config() -> GRACEConfig:
         top_n_words=500,
         exclude_stopwords=True,
         edge_top_k=-1,  # -1: 모든 엣지 유지
-        edge_weight_threshold=0.0,  # 0.0: 필터링 없음
+        edge_weight_threshold=5,  # 5 이하 공출현은 고려하지 않음
 
         # 임베딩
         embedding_method='concat',  # bert + word2vec
@@ -70,8 +70,8 @@ def create_default_config() -> GRACEConfig:
         graphmae_lr=0.001,
         graphmae_device=None,  # 자동 감지
         mask_rate=0.3,
-        encoder_type='gcn',
-        decoder_type='gcn',
+        encoder_type='gat', # 'gcn', 'gat'
+        decoder_type='gat', # 'gcn', 'gat'
 
         # 클러스터링
         clustering_method='kmeans',
@@ -84,7 +84,7 @@ def create_default_config() -> GRACEConfig:
 
         # 출력
         save_results=True,
-        output_dir="results/grace_gcn_edge_weight",
+        output_dir="results",
         save_graph_viz=True,
         save_embeddings=True,
 
@@ -208,7 +208,7 @@ Examples:
     parser.add_argument(
         '--data',
         type=str,
-        default='data/reddit_mental_health_cleaned.csv',
+        default="data/test.csv",
         help='데이터 파일 경로'
     )
 
@@ -281,8 +281,8 @@ Examples:
     parser.add_argument(
         '--edge-weight-threshold',
         type=float,
-        default=0.0,
-        help='엣지 가중치 최소 임계값 (공출현 빈도, 정수값 권장, 기본값: 0.0)'
+        default=5,
+        help='엣지 가중치 최소 임계값 (공출현 빈도, 정수값 권장, 기본값: 5)'
     )
 
     parser.add_argument(
@@ -295,6 +295,13 @@ Examples:
         '--verbose',
         action='store_true',
         help='상세 출력'
+    )
+
+    parser.add_argument(
+        '--random-seed',
+        type=int,
+        default=42,
+        help='재현성을 위한 랜덤 시드 (기본값: 42)'
     )
 
     args = parser.parse_args()
@@ -330,6 +337,9 @@ Examples:
         config.decoder_type = args.decoder_type
         config.mask_rate = args.mask_rate
 
+    # 랜덤 시드 설정
+    config.random_seed = args.random_seed
+
     # 설정 출력
     print(f"\n{Fore.CYAN}Configuration:{Style.RESET_ALL}")
     print(f"  Data: {config.csv_path}")
@@ -348,6 +358,7 @@ Examples:
     print(f"  Encoder type: {config.encoder_type}")
     print(f"  Decoder type: {config.decoder_type}")
     print(f"  Mask rate: {config.mask_rate}")
+    print(f"  Random seed: {config.random_seed}")
     print(f"  Output: {config.output_dir}")
 
     # 모드별 실행
