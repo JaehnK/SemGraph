@@ -12,7 +12,7 @@ class Word2VecTrainer:
     """메모리 기반 Word2Vec 훈련기"""
 
     def __init__(self,
-                iterations: int = 3,
+                iterations: int = 10,
                 initial_lr: float = 0.001,
                 batch_size: int = 32,
                 use_cuda: Optional[bool] = None,

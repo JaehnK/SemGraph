@@ -70,7 +70,7 @@ class Word2VecService:
         dataset = MemoryWord2vecDataset(data_loader, window_size=5)
 
         # 트레이너 생성
-        trainer = Word2VecTrainer(iterations=5, initial_lr=0.025, batch_size=128)
+        trainer = Word2VecTrainer(iterations=10, initial_lr=0.025, batch_size=128)
         
         return cls(doc_service, model, trainer, dataset, data_loader)
     
