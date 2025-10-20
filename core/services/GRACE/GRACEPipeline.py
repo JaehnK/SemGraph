@@ -175,7 +175,25 @@ class GRACEPipeline:
         )
 
         self._log(f"  노드 수: {self.word_graph.num_nodes}")
-        self._log(f"  엣지 수: {self.word_graph.num_edges}")
+        self._log(f"  생성된 엣지 수: {self.word_graph.num_edges}")
+
+        # 엣지 필터링 적용
+        initial_edges = self.word_graph.num_edges
+
+        # 1. 가중치 임계값 필터링
+        if self.config.edge_weight_threshold > 0.0:
+            self.word_graph.filter_edges_by_weight(self.config.edge_weight_threshold)
+            self._log(f"  가중치 필터링 후: {self.word_graph.num_edges} 엣지 "
+                     f"({initial_edges - self.word_graph.num_edges} 제거)")
+            initial_edges = self.word_graph.num_edges
+
+        # 2. Top-K 필터링
+        if self.config.edge_top_k > 0:
+            self.word_graph.filter_edges_top_k_per_node(self.config.edge_top_k)
+            self._log(f"  Top-{self.config.edge_top_k} 필터링 후: {self.word_graph.num_edges} 엣지 "
+                     f"({initial_edges - self.word_graph.num_edges} 제거)")
+
+        self._log(f"  최종 엣지 수: {self.word_graph.num_edges}")
 
     # ============================================================
     # 3. 멀티모달 노드 특성 계산

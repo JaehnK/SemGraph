@@ -11,6 +11,7 @@ Ablation Parameters:
 - Mask Rate: 0.3, 0.5, 0.75, 0.9
 - Epoch: 100, 250, 500, 1000
 - Decoder Type: gcn, gat, mlp, linear
+- Edge Filtering (Top-K): -1 (all), 5, 10, 20, 50
 
 Usage:
     python ablation_main.py --all                    # 모든 ablation 실행
@@ -19,6 +20,7 @@ Usage:
     python ablation_main.py --epochs                 # Epochs ablation만
     python ablation_main.py --output-size            # Output size ablation만
     python ablation_main.py --decoder                # Decoder type ablation만
+    python ablation_main.py --edge-filtering         # Edge filtering ablation만
 """
 
 import argparse
@@ -31,6 +33,7 @@ import torch
 import numpy as np
 import itertools
 from typing import Dict, List, Tuple, Any
+from copy import deepcopy
 
 # PYTHONPATH 설정
 sys.path.insert(0, str(Path(__file__).parent))
@@ -66,6 +69,8 @@ def create_base_config() -> GRACEConfig:
         # 그래프
         top_n_words=500,
         exclude_stopwords=True,
+        edge_top_k=-1,  # edge_filtering ablation에서 변경
+        edge_weight_threshold=0.0,
 
         # 임베딩
         embedding_method='concat',  # embedding ablation에서 변경
@@ -160,7 +165,7 @@ def ablation_embedding_method(
         if method == 'concat':
             # concat일 때는 input_size도 ablation
             for input_size in input_sizes_for_concat:
-                config = create_base_config()
+                config = deepcopy(base_config)
                 config.embedding_method = method
                 config.w2v_dim = input_size // 2
                 config.bert_dim = input_size // 2
@@ -178,7 +183,7 @@ def ablation_embedding_method(
                 }
         else:
             # w2v, bert는 고정 크기
-            config = create_base_config()
+            config = deepcopy(base_config)
             config.embedding_method = method
             config.embed_size = 128
             config.output_dir = str(output_dir / f"embedding_{method}")
@@ -211,7 +216,7 @@ def ablation_output_size(
     results = {}
 
     for output_size in output_sizes:
-        config = create_base_config()
+        config = deepcopy(base_config)
         # concat 모드에서 출력 크기 조정
         config.w2v_dim = output_size // 2
         config.bert_dim = output_size // 2
@@ -245,7 +250,7 @@ def ablation_mask_rate(
     results = {}
 
     for mask_rate in mask_rates:
-        config = create_base_config()
+        config = deepcopy(base_config)
         config.mask_rate = mask_rate
         config.output_dir = str(output_dir / f"mask_rate_{mask_rate}")
 
@@ -276,7 +281,7 @@ def ablation_epochs(
     results = {}
 
     for epochs in epochs_list:
-        config = create_base_config()
+        config = deepcopy(base_config)
         config.graphmae_epochs = epochs
         config.output_dir = str(output_dir / f"epochs_{epochs}")
 
@@ -307,7 +312,7 @@ def ablation_decoder_type(
     results = {}
 
     for decoder_type in decoder_types:
-        config = create_base_config()
+        config = deepcopy(base_config)
         config.decoder_type = decoder_type
         config.output_dir = str(output_dir / f"decoder_{decoder_type}")
 
@@ -316,6 +321,37 @@ def ablation_decoder_type(
 
         results[f"decoder_{decoder_type}"] = {
             'decoder_type': decoder_type,
+            'n_clusters': n_clusters,
+            'metrics': metrics
+        }
+
+    return results
+
+
+def ablation_edge_filtering(
+    base_config: GRACEConfig,
+    output_dir: Path,
+    verbose: bool = False
+) -> Dict[str, Any]:
+    """Edge Filtering Ablation (Top-K)"""
+
+    print(f"\n{Fore.MAGENTA}{'=' * 80}")
+    print(f"{Fore.GREEN}Ablation 6: Edge Filtering (Top-K per Node)")
+    print(f"{Fore.MAGENTA}{'=' * 80}{Style.RESET_ALL}\n")
+
+    top_k_values = [-1, 5, 10, 20, 50]  # -1: no filtering
+    results = {}
+
+    for top_k in top_k_values:
+        config = deepcopy(base_config)
+        config.edge_top_k = top_k
+        config.output_dir = str(output_dir / f"edge_top_k_{top_k}")
+
+        exp_name = f"EdgeTopK={top_k if top_k > 0 else 'All'}"
+        metrics, n_clusters = run_single_experiment(config, exp_name, verbose)
+
+        results[f"top_k_{top_k}"] = {
+            'edge_top_k': top_k,
             'n_clusters': n_clusters,
             'metrics': metrics
         }
@@ -415,6 +451,12 @@ def run_full_ablation_study(
         save_ablation_results(results_decoder, "decoder_type", output_dir)
         print_ablation_summary(results_decoder, "Decoder Type")
 
+    if 'edge-filtering' in selected_ablations or 'all' in selected_ablations:
+        results_edge = ablation_edge_filtering(base_config, output_dir / "edge_filtering", verbose)
+        all_results['edge_filtering'] = results_edge
+        save_ablation_results(results_edge, "edge_filtering", output_dir)
+        print_ablation_summary(results_edge, "Edge Filtering (Top-K)")
+
     # 전체 결과 저장
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     final_results_file = output_dir / f"ablation_study_full_{timestamp}.json"
@@ -458,6 +500,7 @@ Examples:
     parser.add_argument('--mask-rate', action='store_true', help='Mask rate ablation')
     parser.add_argument('--epochs', action='store_true', help='Training epochs ablation')
     parser.add_argument('--decoder', action='store_true', help='Decoder type ablation')
+    parser.add_argument('--edge-filtering', action='store_true', help='Edge filtering (top-k) ablation')
 
     # 공통 설정
     parser.add_argument('--data', type=str, default='data/reddit_mental_health_cleaned.csv',
@@ -493,6 +536,8 @@ Examples:
             selected_ablations.append('epochs')
         if args.decoder:
             selected_ablations.append('decoder')
+        if args.edge_filtering:
+            selected_ablations.append('edge-filtering')
 
     if not selected_ablations:
         print(f"{Fore.RED}Error: No ablation selected. Use --all or specific flags.{Style.RESET_ALL}")

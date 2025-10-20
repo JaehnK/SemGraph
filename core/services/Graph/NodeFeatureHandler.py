@@ -109,14 +109,17 @@ class NodeFeatureHandler:
         return result
 
     def _adjust_embedding_dimension(self, embeddings: torch.Tensor, target_dim: int) -> torch.Tensor:
-        """임베딩 차원을 target_dim으로 조정 (자르기 또는 패딩)"""
+        """임베딩 차원을 target_dim으로 조정 (PCA 또는 패딩)"""
         current_dim = embeddings.shape[1]
 
         if current_dim == target_dim:
             return embeddings
         elif current_dim > target_dim:
-            # 차원이 클 경우: 앞쪽 target_dim개만 사용
-            return embeddings[:, :target_dim]
+            # 차원이 클 경우: PCA로 차원 축소 (정보 보존)
+            embeddings_np = embeddings.cpu().numpy()
+            pca = PCA(n_components=target_dim, random_state=self.random_seed)
+            reduced_embeddings = pca.fit_transform(embeddings_np)
+            return torch.tensor(reduced_embeddings, dtype=embeddings.dtype)
         else:
             # 차원이 작을 경우: 0으로 패딩
             num_samples = embeddings.shape[0]

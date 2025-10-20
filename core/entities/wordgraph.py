@@ -346,6 +346,83 @@ class WordGraph:
         
         return list(set(neighbors))  # 중복 제거
     
+    def filter_edges_by_weight(self, threshold: float, weight_column: int = 0) -> None:
+        """
+        가중치 기준으로 엣지 필터링 (threshold 이상만 유지)
+
+        Args:
+            threshold: 최소 가중치 임계값
+            weight_column: edge_attr에서 사용할 가중치 컬럼 인덱스 (기본: 0)
+        """
+        if self._edge_index is None or self._edge_attr is None:
+            return
+
+        if self.num_edges == 0:
+            return
+
+        # 가중치 추출
+        if self._edge_attr.dim() == 1:
+            weights = self._edge_attr
+        else:
+            weights = self._edge_attr[:, weight_column]
+
+        # threshold 이상인 엣지만 선택
+        mask = weights >= threshold
+
+        # 필터링
+        self._edge_index = self._edge_index[:, mask]
+        self._edge_attr = self._edge_attr[mask]
+
+        self._update_metadata()
+
+    def filter_edges_top_k_per_node(self, k: int, weight_column: int = 0) -> None:
+        """
+        각 노드당 상위 k개의 엣지만 유지 (가중치 기준)
+
+        Args:
+            k: 각 노드당 유지할 엣지 개수
+            weight_column: edge_attr에서 사용할 가중치 컬럼 인덱스 (기본: 0)
+        """
+        if self._edge_index is None or self._edge_attr is None:
+            return
+
+        if self.num_edges == 0 or k <= 0:
+            return
+
+        # 가중치 추출
+        if self._edge_attr.dim() == 1:
+            weights = self._edge_attr
+        else:
+            weights = self._edge_attr[:, weight_column]
+
+        # 각 노드별로 상위 k개 엣지 선택
+        edge_mask = torch.zeros(self.num_edges, dtype=torch.bool)
+
+        for node_id in range(self.num_nodes):
+            # 이 노드가 source인 엣지 찾기
+            node_edges_mask = self._edge_index[0] == node_id
+            node_edge_indices = torch.where(node_edges_mask)[0]
+
+            if len(node_edge_indices) == 0:
+                continue
+
+            # 이 노드의 엣지들의 가중치
+            node_weights = weights[node_edge_indices]
+
+            # 상위 k개 선택 (k개보다 적으면 전부 선택)
+            top_k = min(k, len(node_weights))
+            _, top_k_indices = torch.topk(node_weights, top_k)
+
+            # 선택된 엣지 마스킹
+            selected_edges = node_edge_indices[top_k_indices]
+            edge_mask[selected_edges] = True
+
+        # 필터링 적용
+        self._edge_index = self._edge_index[:, edge_mask]
+        self._edge_attr = self._edge_attr[edge_mask]
+
+        self._update_metadata()
+
     def get_graph_stats(self) -> Dict[str, Any]:
         """그래프 통계 정보"""
         stats = {
@@ -358,12 +435,12 @@ class WordGraph:
             'density': 0,
             'avg_degree': 0
         }
-        
+
         if self.num_edges > 0 and self.num_nodes > 1:
             max_edges = self.num_nodes * (self.num_nodes - 1) // 2  # 무방향 그래프
             stats['density'] = self.num_edges / max_edges
             stats['avg_degree'] = (2 * self.num_edges) / self.num_nodes
-        
+
         return stats
     
     def save_to_disk(self, filepath: str) -> None:

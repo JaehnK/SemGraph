@@ -49,13 +49,15 @@ def create_default_config() -> GRACEConfig:
 
     config = GRACEConfig(
         # 데이터
-        csv_path="data/reddit_mental_health_cleaned.csv",
+        csv_path="data/test.csv",
         num_documents=10000,
-        text_column='body',
+        text_column='text',
 
         # 그래프
         top_n_words=500,
         exclude_stopwords=True,
+        edge_top_k=-1,  # -1: 모든 엣지 유지
+        edge_weight_threshold=0.0,  # 0.0: 필터링 없음
 
         # 임베딩
         embedding_method='concat',  # bert + word2vec
@@ -270,6 +272,20 @@ Examples:
     )
 
     parser.add_argument(
+        '--edge-top-k',
+        type=int,
+        default=-1,
+        help='각 노드당 유지할 상위 k개 엣지 (-1: 전부 유지, 기본값: -1)'
+    )
+
+    parser.add_argument(
+        '--edge-weight-threshold',
+        type=float,
+        default=0.0,
+        help='엣지 가중치 최소 임계값 (공출현 빈도, 정수값 권장, 기본값: 0.0)'
+    )
+
+    parser.add_argument(
         '--no-graphmae',
         action='store_true',
         help='GraphMAE 사용하지 않음'
@@ -302,6 +318,10 @@ Examples:
     config.embed_size = args.embed_size
     config.output_dir = args.output
 
+    # 엣지 필터링 설정
+    config.edge_top_k = args.edge_top_k
+    config.edge_weight_threshold = args.edge_weight_threshold
+
     # GraphMAE 관련 설정
     if not args.no_graphmae:
         config.graphmae_epochs = args.epochs
@@ -316,6 +336,13 @@ Examples:
     print(f"  Max docs: {config.num_documents}")
     print(f"  Embedding method: {config.embedding_method}")
     print(f"  Embed size: {config.embed_size}")
+    print(f"  Edge filtering:")
+    if config.edge_top_k > 0:
+        print(f"    Top-k per node: {config.edge_top_k}")
+    if config.edge_weight_threshold > 0.0:
+        print(f"    Weight threshold: {config.edge_weight_threshold}")
+    if config.edge_top_k <= 0 and config.edge_weight_threshold <= 0.0:
+        print(f"    None (all edges retained)")
     print(f"  GraphMAE epochs: {config.graphmae_epochs}")
     print(f"  Device: {config.graphmae_device if config.graphmae_device else 'auto'}")
     print(f"  Encoder type: {config.encoder_type}")
