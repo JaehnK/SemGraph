@@ -27,7 +27,7 @@ from services.Document import DocumentService
 from services.Graph import GraphService
 from services.Graph import NodeFeatureHandler
 from services.GraphMAE import GraphMAEService, GraphMAEConfig
-from services.GRACE import ClusteringService
+from services.clustering import ClusteringService
 from services.Metric import MetricsService
 from entities import NodeFeatureType
 

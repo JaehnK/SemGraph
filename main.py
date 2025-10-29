@@ -49,7 +49,7 @@ def create_default_config() -> GRACEConfig:
 
     config = GRACEConfig(
         # 데이터
-        csv_path="data/test.csv",
+        csv_path="data/ag_news.csv",
         num_documents=10000,
         text_column='text',
 
@@ -61,9 +61,10 @@ def create_default_config() -> GRACEConfig:
 
         # 임베딩
         embedding_method='concat',  # bert + word2vec
-        embed_size=128,
-        w2v_dim=64,
-        bert_dim=64,
+        fusion_type='gated',
+        embed_size=256,
+        w2v_dim=128,
+        bert_dim=128,
 
         # GraphMAE
         graphmae_epochs=1000,
@@ -229,7 +230,7 @@ Examples:
     parser.add_argument(
         '--embed-size',
         type=int,
-        default=128,
+        default=256,
         help='임베딩 차원'
     )
 
@@ -253,7 +254,7 @@ Examples:
         type=str,
         default='gat',
         choices=['gat', 'tsgat', 'gcn', 'mlp', 'linear'],
-        help='GraphMAE encoder type (기본값: gcn)'
+        help='GraphMAE encoder type (기본값: gat)'
     )
 
     parser.add_argument(

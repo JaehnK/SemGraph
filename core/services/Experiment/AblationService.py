@@ -16,7 +16,7 @@ import json
 
 from ..GRACE.GRACEConfig import GRACEConfig
 from ..GRACE.GRACEPipeline import GRACEPipeline
-from ..GRACE.ClusteringService import ClusteringService
+from ..clustering import SphericalKMeansClusteringService
 from ..Metric import MetricsService
 from ..Document.DocumentService import DocumentService
 from ..Graph.GraphService import GraphService
@@ -495,13 +495,13 @@ class AblationService:
             # GraphMAE 없이 멀티모달 임베딩만 사용
             embeddings = node_features
 
-        # 클러스터링
-        clustering_service = ClusteringService(random_state=self.random_state)
+        # 클러스터링 (Spherical K-means - 코사인 거리 기반)
+        clustering_service = SphericalKMeansClusteringService(random_state=self.random_state)
 
         if config.num_clusters is not None:
-            labels = clustering_service.kmeans_clustering(embeddings, n_clusters=config.num_clusters)
+            labels = clustering_service.fit_predict(embeddings, n_clusters=config.num_clusters)
         else:
-            labels, best_k, _, _ = clustering_service.auto_clustering_elbow(
+            labels, best_k, _, _ = clustering_service.auto_clustering(
                 embeddings,
                 min_clusters=config.min_clusters,
                 max_clusters=config.max_clusters

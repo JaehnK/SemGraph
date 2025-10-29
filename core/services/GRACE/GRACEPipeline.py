@@ -28,8 +28,9 @@ from ..GraphMAE import GraphMAEService, GraphMAEConfig
 from entities import Word, WordGraph, NodeFeatureType
 
 from .GRACEConfig import GRACEConfig
-from .ClusteringService import ClusteringService
+from ..clustering import SphericalKMeansClusteringService
 from ..Metric import MetricsService
+from ..Visualization import VisualizationService
 
 
 class GRACEPipeline:
@@ -50,12 +51,16 @@ class GRACEPipeline:
         random.seed(self.config.random_seed)
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(self.config.random_seed)
+            # CUDA 연산의 재현성 보장
+            torch.backends.cudnn.deterministic = True
+            torch.backends.cudnn.benchmark = False
 
         # 서비스 인스턴스
         self.doc_service: Optional[DocumentService] = None
         self.graph_service: Optional[GraphService] = None
         self.node_feature_handler: Optional[NodeFeatureHandler] = None
-        self.clustering_service = ClusteringService(random_state=self.config.random_seed)
+        # Spherical K-means (코사인 거리 기반) - 텍스트 임베딩에 최적화
+        self.clustering_service = SphericalKMeansClusteringService(random_state=self.config.random_seed)
         self.metrics_service = MetricsService()
 
         # 중간 결과 저장
@@ -209,15 +214,25 @@ class GRACEPipeline:
         method_desc = {
             'concat': f"Word2Vec({self.config.w2v_dim}) + BERT({self.config.bert_dim})",
             'w2v': f"Word2Vec({self.config.embed_size})",
-            'bert': f"BERT({self.config.embed_size})"
+            'bert': f"BERT({self.config.embed_size})",
+            'attention': f"Attention Fusion ({self.config.fusion_type}, {self.config.embed_size}d)"
         }
         self._log(f"  임베딩 방법: {method_desc[self.config.embedding_method]}")
 
-        self.node_features = self.node_feature_handler.calculate_embeddings(
-            self.word_graph.words,
-            method=self.config.embedding_method,
-            embed_size=self.config.embed_size
-        )
+        # Attention fusion의 경우 fusion_type 전달
+        if self.config.embedding_method == 'attention':
+            self.node_features = self.node_feature_handler.calculate_embeddings(
+                self.word_graph.words,
+                method=self.config.embedding_method,
+                embed_size=self.config.embed_size,
+                fusion_type=self.config.fusion_type
+            )
+        else:
+            self.node_features = self.node_feature_handler.calculate_embeddings(
+                self.word_graph.words,
+                method=self.config.embedding_method,
+                embed_size=self.config.embed_size
+            )
 
         self._log(f"  노드 특성 형태: {self.node_features.shape}")
 
@@ -306,18 +321,18 @@ class GRACEPipeline:
 
         if self.config.num_clusters is not None:
             # 지정된 클러스터 수로 실행
-            self.cluster_labels = self.clustering_service.kmeans_clustering(
+            self.cluster_labels = self.clustering_service.fit_predict(
                 self.graphmae_embeddings,
                 n_clusters=self.config.num_clusters,
                 n_init=10
             )
-            self._log(f"  K-means 완료: {self.config.num_clusters}개 클러스터")
+            self._log(f"  Spherical K-means 완료: {self.config.num_clusters}개 클러스터")
         else:
             # Elbow Method로 최적 클러스터 수 탐색
             self._log(f"  Elbow Method로 최적 클러스터 수 탐색 중 ({self.config.min_clusters}-{self.config.max_clusters})...")
 
             self.cluster_labels, best_k, inertias, silhouette_scores = \
-                self.clustering_service.auto_clustering_elbow(
+                self.clustering_service.auto_clustering(
                     self.graphmae_embeddings,
                     min_clusters=self.config.min_clusters,
                     max_clusters=self.config.max_clusters,
@@ -381,6 +396,10 @@ class GRACEPipeline:
         if self.config.save_results:
             self._save_results(results)
 
+        # 시각화 생성
+        if self.config.save_graph_viz:
+            self._generate_visualizations()
+
         self.cluster_results = results
         return results
 
@@ -420,6 +439,63 @@ class GRACEPipeline:
                 'word_list': [w.content for w in self.word_graph.words]
             }, embed_path)
             self._log(f"  임베딩 저장: {embed_path}")
+
+    def _generate_visualizations(self) -> None:
+        """시각화 생성 (t-SNE, Word Cloud, Network Graph)"""
+        self._log("\n  시각화 생성 중...")
+
+        output_dir = Path(self.config.output_dir) / "visualizations"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        viz_service = VisualizationService(output_dir=str(output_dir))
+
+        embeddings = self.graphmae_embeddings.numpy()
+        labels = self.cluster_labels
+
+        # 1. t-SNE 시각화
+        try:
+            tsne_path = viz_service.visualize_embeddings(
+                embeddings=embeddings,
+                labels=labels,
+                method='tsne',
+                filename=f'tsne_{timestamp}.png',
+                title='GRACE Embeddings (t-SNE)'
+            )
+            self._log(f"    ✓ t-SNE: {tsne_path.name}")
+        except Exception as e:
+            self._log(f"    ✗ t-SNE 실패: {e}")
+
+        # 2. 워드클라우드
+        try:
+            cluster_words = self._build_cluster_info()
+            wordcloud_path = viz_service.visualize_cluster_words(
+                cluster_words=cluster_words,
+                filename=f'wordcloud_{timestamp}.png',
+                max_words=50
+            )
+            self._log(f"    ✓ Word Cloud: {wordcloud_path.name}")
+        except ImportError:
+            self._log(f"    ✗ Word Cloud 건너뛰기 (wordcloud 패키지 필요)")
+        except Exception as e:
+            self._log(f"    ✗ Word Cloud 실패: {e}")
+
+        # 3. 네트워크 그래프
+        try:
+            # 엣지가 너무 많으면 상위 1000개만 표시
+            max_edges = 1000 if self.word_graph.num_edges > 1000 else None
+            network_path = viz_service.visualize_network(
+                word_graph=self.word_graph,
+                cluster_labels=labels,
+                filename=f'network_{timestamp}.png',
+                title='Semantic Network with Clusters',
+                max_edges=max_edges
+            )
+            self._log(f"    ✓ Network Graph: {network_path.name}")
+        except ImportError:
+            self._log(f"    ✗ Network Graph 건너뛰기 (networkx 패키지 필요)")
+        except Exception as e:
+            self._log(f"    ✗ Network Graph 실패: {e}")
 
     def _log(self, message: str) -> None:
         """로그 출력"""

@@ -1,0 +1,18 @@
+\begin{table}[htbp]
+\centering
+\caption{RQ1: Single vs Multi-modal Embeddings (Mean ± Std, n=5)}
+\label{tab:rq1_results}
+\begin{tabular}{l|cccc}
+\hline
+Model & Silhouette & Davies-Bouldin & Calinski-Harabasz & NPMI \\
+\hline
+W2V\text{-}KMeans & $0.000 \pm 0.002^{***}$ & $7.038 \pm 0.601^{***}$ & $2.077 \pm 0.228^{***}$ & $0.050 \pm 0.006^{***}$ \\
+BERT\text{-}KMeans & $-0.027 \pm 0.007^{***}$ & $4.752 \pm 0.419^{***}$ & $1.475 \pm 0.009^{***}$ & $0.170 \pm 0.029^{*}$ \\
+Concat\text{-}KMeans & $-0.027 \pm 0.007^{***}$ & $4.754 \pm 0.416^{***}$ & $1.474 \pm 0.010^{***}$ & $0.170 \pm 0.029^{*}$ \\
+GRACE & $0.309 \pm 0.039$ & $1.456 \pm 0.112$ & $177.335 \pm 41.303$ & $0.135 \pm 0.008$ \\
+\hline
+\end{tabular}
+\begin{tablenotes}
+\item Significance vs GRACE: $^{***}$ $p < 0.0167$ (Bonferroni), $^{**}$ $p < 0.01$, $^{*}$ $p < 0.05$
+\end{tablenotes}
+\end{table}

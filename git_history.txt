@@ -1,0 +1,130 @@
+* 40853ea 2025-10-20 | Force GitHub contributor stats refresh (HEAD -> main, origin/main) [jaehnK]
+* edb94b7 2025-10-20 | ADD: 랜덤 파라미터 추가 및 experiments코드 작성 [jaehnK]
+* 301a06b 2025-10-20 | FEAT: W2v iter 5로 수정 [jaehnK]
+* 086ab17 2025-10-20 | FEAT: 학습 전 임베딩 차원 축소 PCA로 수정 [jaehnK]
+* cecd4ab 2025-10-18 | Feat: GraphMAE encoder/decoder 선택 및 ablation study 인프라 추가 [jaehnK]
+* 0da746b 2025-10-17 | Update contributors [jaehnK]
+* 81269b1 2025-10-17 | Feat: 재현성 강화 및 전통적 그래프 클러스터링 추가 [jaehnK]
+* ee0e33e 2025-10-05 | FEAT: 불용어 처리 다시 함 [jaehnK]
+* 7c813dc 2025-10-05 | ADD: NPMI 손실함수 추가 [jaehnK]
+* 40262d0 2025-10-05 | Fix(Word2Vec): 고정된 로스 해결 및 학습 안정성 전반 개선 이 커밋은 Word2Vec 모델 학습 중 로스가 약 4.16에서 고정되어 개선되지 않던 문제를 해결하고, 전반적인 학습 안정성을 향상시킵니다. 주요 원인은 임베딩 초기화 범위가 지나치게 작아 초기 내적 값이 거의 0에 가까웠고, 이로 인해 로스 값이 고정되는 현상이 발생했습니다. 또한, 데이터 전처리 및 옵티마이저 운용 방식에도 문제가 있었습니다. 주요 변경 사항은 다음과 같습니다: 서브샘플링 로직 및 네거티브 샘플링 개선 (core/services/Word2Vec/DataLoader.py): 서브샘플링 discard 확률 계산 로직을 수정하여 Mikolov et al.의 공식에 기반한 keep_probs(유지 확률)를 사용하도록 변경했습니다. 이를 통해 고빈도 단어가 적절하게 다운샘플링되어 더 정보량 있는 학습 페어를 생성합니다. 네거티브 샘플이 긍정 타겟 단어와 동일한 ID를 갖지 않도록 로직을 구현하여 네거티브 샘플링의 품질을 향상시켰습니다. 옵티마이저 및 학습률 스케줄링 재구조화 (core/services/Word2Vec/Trainer.py): 옵티마이저(optim.Adam에서 optim.SGD with momentum=0.9로 변경)와 학습률 스케줄러(선형 감소) 초기화를 에폭별 루프 밖으로 이동하여, 매 에폭마다 상태가 재초기화되는 문제를 해결했습니다. initial_lr에서 initial_lr * min_lr_ratio까지 선형적으로 학습률이 감소하도록 구현하여 학습의 안정성과 수렴 속도를 개선했습니다. 임베딩 초기화 개선 (core/entities/skipgram.py): 임베딩 가중치의 initrange를 0.5 / emb_dimension에서 sqrt(6 / (2 * emb_dimension)) (Xavier/Glorot 균등 분포 변형)으로 조정했습니다. 이는 임베딩에 더 적절한 초기 스케일을 제공하여 로스 정체 현상을 해소했습니다. 하이퍼파라미터 튜닝 (core/services/Word2Vec/Word2VecService.py): emb_dimension을 512에서 128로 줄여 Word2Vec에 더 표준적이고 효율적인 크기를 적용했습니다. batch_size를 512에서 128로 줄여 학습 중 더 효과적인 그래디언트 신호를 제공하도록 했습니다. window_size를 10에서 5로 조정하여 일반적인 Word2Vec 관행에 맞추었습니다. [jaehnK]
+* b5057ac 2025-10-04 | ADD: 로드맵 추가 [jaehnK]
+*   222eafc 2025-10-04 | chore: remove tracked __pycache__/.pyc and fix .gitignore [jaehnK]
+|\  
+| * 7bc26f0 2025-10-04 | chore: fix .gitignore conflict markers; remove tracked __pycache__/.pyc (origin/chore/cleanup-pyc, chore/cleanup-pyc) [jaehnK]
+|/  
+*   6bdefc8 2025-10-04 | Merge pull request #4 from JaehnK/feature/graphmae [Kim Jaehun(김재훈)]
+|\  
+| *   730daf6 2025-10-04 | Merge origin/main into feature/graphmae: resolve conflicts and keep feature changes (origin/feature/graphmae, feature/graphmae) [jaehnK]
+| |\  
+| |/  
+|/|   
+* |   a6d54e5 2025-09-28 | Merge pull request #3 from JaehnK/feature/distillBERT [Kim Jaehun(김재훈)]
+|\ \  
+| * | a5c3a72 2025-09-28 | Resolve conflicts by keeping current branch version [jaehnK]
+| * | 0f79d59 2025-09-28 | Remove __pycache__ files and resolve conflicts [jaehnK]
+| * | df3c123 2025-09-24 | ADD: BertService.py 구현완 [jaehnK]
+| * | 7384c46 2025-09-23 | ADD: 버트 임베딩을 검색 업데이트 함수 추가 [jaehnK]
+| * | 4f00206 2025-09-23 | ADD: DBERT, 메인비즈니스로직 추가 [jaehnK]
+| * | f27a815 2025-09-06 | feat: 축약어 확장 및 서브워드 임베딩 평균화를 통한 텍스트 전처리 개선 [jaehnK]
+| * | 0b24df7 2025-09-06 | asdf [jaehnK]
+| * | 69a4586 2025-09-06 | Re-add all files after .gitignore update [jaehnK]
+| * | 92ff96a 2025-09-06 | Exclude DistillBERT directory from Git tracking [jaehnK]
+| * | 4cb0820 2025-09-06 | feat [jaehnK]
+| * | 4c25433 2025-09-06 | Clean up after removing DistillBERT directory [jaehnK]
+| * | bec217a 2025-09-06 | Re-add all files after cleaning Git cache [jaehnK]
+| * | abe95d4 2025-09-06 | Refactor .gitignore to exclude core/DistillBERT/ [jaehnK]
+| * | bac07e1 2025-09-06 | Exclude model files from Git [jaehnK]
+| * | b3263fb 2025-09-06 | Exclude model files from Git [jaehnK]
+| * | be547e4 2025-09-06 | Exclude model files from Git [jaehnK]
+| * | cb91eee 2025-09-05 | FEAT: gitignore [jaehnK]
+| * | 449b91d 2025-09-05 | Remove DistillBERT model cache from Git tracking [jaehnK]
+| * | 6c62707 2025-09-05 | FEAT: DocumentService # 처리할 rawdata가 없으면 빈 리스트로 초기화하고 종료 if문 평가로직 수정 [jaehnK]
+|/ /  
+* | 8cb515b 2025-09-05 | FEAT: Word2Vec 클래스들 수정 -> doc에서 단어를 가져온 이후, word2id 맵에 따라 word2vec에서 올바른 인덱스 범위로 재맵핑 -> tqdm 터미널 출력 문제 수정(프로그레스바가 수정되는 것이 아닌 새로운 프로그레스바를 계속 출력하던 문제) -> w2v모델 저장 비활성화: 현 프로젝트에서 불필요함 [jaehnK]
+* | 8c052de 2025-08-31 | FEAT: 코드 복기중, 왜 co_occurence 함수의 리턴이 이모양인지 파악하기 [jaehnK]
+* | 5df630c 2025-08-30 | FEAT: Requirements.txt [jaehnK]
+* | 32871f3 2025-08-30 | refactor: 아키텍처 개선 - 서비스와 엔티티 레이어 분리 및 책임 분리 [jaehnK]
+| * 2839f29 2025-10-04 | chore(gitignore): ignore core/DistillBERT/ [jaehnK]
+| * 4ddafd3 2025-10-03 | asdf [jaehnK]
+| * 06ab859 2025-10-03 | qwer [jaehnK]
+| * 7567e9a 2025-10-03 | gitignore 수정 [jaehnK]
+| * bc1b06e 2025-10-03 | ADD: 평가 지표 및 k-means 추가 NPMI등 추가적인 평가 로직과 더불어 비교 모델 추가해야함 [jaehnK]
+| * 16bedd1 2025-09-28 | ADD: service에 graphmae 추가 graphservice에서 dgl변환 로직 추가 [jaehnK]
+| | *   4d7d96e 2025-10-04 | On (no branch): temp: rebase to drop large blob (refs/stash) [jaehnK]
+| |/|\  
+| | | * faa37ff 2025-10-04 | untracked files on (no branch): ee5beef FEAT: Word2Vec 클래스들 수정 -> doc에서 단어를 가져온 이후, word2id 맵에 따라 word2vec에서 올바른 인덱스 범위로 재맵핑 -> tqdm 터미널 출력 문제 수정(프로그레스바가 수정되는 것이 아닌 새로운 프로그레스바를 계속 출력하던 문제) -> w2v모델 저장 비활성화: 현 프로젝트에서 불필요함 [jaehnK]
+| | * 22114da 2025-10-04 | index on (no branch): ee5beef FEAT: Word2Vec 클래스들 수정 -> doc에서 단어를 가져온 이후, word2id 맵에 따라 word2vec에서 올바른 인덱스 범위로 재맵핑 -> tqdm 터미널 출력 문제 수정(프로그레스바가 수정되는 것이 아닌 새로운 프로그레스바를 계속 출력하던 문제) -> w2v모델 저장 비활성화: 현 프로젝트에서 불필요함 [jaehnK]
+| |/  
+| | * 47d1fbd 2025-09-28 | Merge pull request #3 from JaehnK/feature/distillBERT (clean/graphmae) [Kim Jaehun(김재훈)]
+| |/| 
+| | * d9f826c 2025-09-28 | Resolve conflicts by keeping current branch version (feature/distillBERT) [jaehnK]
+| | * 841c205 2025-09-28 | Remove __pycache__ files and resolve conflicts [jaehnK]
+| | * 5d4642d 2025-09-24 | ADD: BertService.py 구현완 [jaehnK]
+| | * 7c2b471 2025-09-23 | ADD: 버트 임베딩을 검색 업데이트 함수 추가 [jaehnK]
+| | * 16db5e1 2025-09-23 | ADD: DBERT, 메인비즈니스로직 추가 [jaehnK]
+| | * e2cbfae 2025-09-06 | feat: 축약어 확장 및 서브워드 임베딩 평균화를 통한 텍스트 전처리 개선 [jaehnK]
+| | * 5e3a3e0 2025-09-06 | asdf [jaehnK]
+| | * d901f0d 2025-09-06 | Re-add all files after .gitignore update [jaehnK]
+| | * 42c4c0d 2025-09-06 | Exclude DistillBERT directory from Git tracking [jaehnK]
+| | * 90a0642 2025-09-06 | feat [jaehnK]
+| | * e6f9ec5 2025-09-06 | Clean up after removing DistillBERT directory [jaehnK]
+| | * 55119c3 2025-09-06 | Re-add all files after cleaning Git cache [jaehnK]
+| | * be12f34 2025-09-06 | Refactor .gitignore to exclude core/DistillBERT/ [jaehnK]
+| | * 3f9eb3f 2025-09-06 | Exclude model files from Git [jaehnK]
+| | * feffe07 2025-09-06 | Exclude model files from Git [jaehnK]
+| | * c995138 2025-09-06 | Exclude model files from Git [jaehnK]
+| | * 57f31e9 2025-09-05 | FEAT: gitignore [jaehnK]
+| | * ae48213 2025-09-05 | Remove DistillBERT model cache from Git tracking [jaehnK]
+| | * b0777cf 2025-09-05 | FEAT: DocumentService # 처리할 rawdata가 없으면 빈 리스트로 초기화하고 종료 if문 평가로직 수정 [jaehnK]
+| |/  
+| | * 9c8a387 2025-09-06 | Refactor .gitignore to exclude core/DistillBERT/ [jaehnK]
+| | * 5c22f29 2025-09-06 | Exclude model files from Git [jaehnK]
+| | * 22ceee8 2025-09-06 | Exclude model files from Git [jaehnK]
+| | * 8728ce8 2025-09-06 | Exclude model files from Git [jaehnK]
+| | * f93d1c8 2025-09-05 | FEAT: gitignore [jaehnK]
+| | * 0be16e1 2025-09-05 | Remove DistillBERT model cache from Git tracking [jaehnK]
+| | * d55489b 2025-09-05 | FEAT: DocumentService # 처리할 rawdata가 없으면 빈 리스트로 초기화하고 종료 if문 평가로직 수정 [jaehnK]
+| |/  
+| * ee5beef 2025-09-05 | FEAT: Word2Vec 클래스들 수정 -> doc에서 단어를 가져온 이후, word2id 맵에 따라 word2vec에서 올바른 인덱스 범위로 재맵핑 -> tqdm 터미널 출력 문제 수정(프로그레스바가 수정되는 것이 아닌 새로운 프로그레스바를 계속 출력하던 문제) -> w2v모델 저장 비활성화: 현 프로젝트에서 불필요함 (feature/numeric-word-filtering, add/distillBERT) [jaehnK]
+| * c81f7c1 2025-08-31 | FEAT: 코드 복기중, 왜 co_occurence 함수의 리턴이 이모양인지 파악하기 [jaehnK]
+| * 01ca449 2025-08-30 | FEAT: Requirements.txt [jaehnK]
+| * 8a8090d 2025-08-30 | refactor: 아키텍처 개선 - 서비스와 엔티티 레이어 분리 및 책임 분리 [jaehnK]
+| | * 9e9cad8 2025-08-30 | [Archive] Move old main branch content to old branch for preservation (old) [jaehnK]
+| | | *   6260d51 2025-08-30 | WIP on main: 3c2c3ca Remove large model files from tracking [jaehnK]
+| | | |\  
+| | | | * f58af5d 2025-08-30 | index on main: 3c2c3ca Remove large model files from tracking [jaehnK]
+| | | |/  
+| | | | * ea8a49d 2025-08-02 | refactor: Decouple services and entities for clarity and portability (refactor/service-layer) [김재훈]
+| | |_|/  
+| |/| |   
+| * | | ccee6bd 2025-07-22 | Merge pull request #2 from JaehnK/refact [Kim Jaehun(김재훈)]
+| |\| | 
+| * | |   f3a75c1 2025-06-27 | Merge pull request #1 from JaehnK/refact [Kim Jaehun(김재훈)]
+| |\ \ \  
+| | |_|/  
+| |/| |   
+| | | | * 7fc9f96 2025-08-02 | refactor: Decouple services and entities for clarity and portability (origin/refactor/service-layer) [김재훈]
+| |_|_|/  
+|/| | |   
+* | | |   d684120 2025-07-22 | Merge pull request #2 from JaehnK/refact [Kim Jaehun(김재훈)]
+|\ \ \ \  
+| | |_|/  
+| |/| |   
+| * | | c058f66 2025-07-22 | [Feat] ETC (origin/refact, refact) [jaehnK]
+| * | | aeb3818 2025-07-10 | [Feat] Creating Word2Vec [jaehnK]
+| | |/  
+| |/|   
+* | | cdf8da3 2025-06-27 | Merge pull request #1 from JaehnK/refact [Kim Jaehun(김재훈)]
+|\| | 
+| |/  
+|/|   
+| * a35c087 2025-06-25 | [Feat] 객체지향적 구조로 재정의 [jaehnK]
+|/  
+* 3c2c3ca 2025-06-25 | Remove large model files from tracking [jaehnK]
+* d10adcb 2025-06-20 | [Add] Trie to cyhton [jaehnK]
+* e3080b0 2025-05-31 | [Feat] nltk -> spacy [Add] Stopword [jaehnK]
+* f835bef 2025-05-29 | [Feat] Preprocess Modularization [jaehnK]
+* 7fd774e 2025-05-28 | [Add] preprocess finish [jaehnK]
+* 85b8a14 2025-05-03 | asdf [jaehnK]
+* 116690f 2025-03-30 | First commit [jaehnK]

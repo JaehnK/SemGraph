@@ -1,23 +1,31 @@
 #!/usr/bin/env python3
 """
-RQ1 실험: 단일 vs 다중 임베딩 비교
+RQ1 실험: 단일 vs 다중 임베딩 비교 (모든 모델 256d 통일)
 
-연구 질문: 다중 임베딩(Word2Vec + DistilBERT)이 단일 임베딩보다
-           클러스터링 성능을 향상시키는가?
+연구 질문: GraphMAE와 Multi-modal fusion이 클러스터링 성능에 미치는 영향은?
 
-비교 모델:
-1. W2V-KMeans: Word2Vec만 사용 + K-means
-2. BERT-KMeans: DistilBERT만 사용 + K-means
-3. Concat-KMeans: Word2Vec + DistilBERT (GraphMAE 없이) + K-means
-4. Ours: Word2Vec + DistilBERT + GraphMAE + K-means
+비교 모델 (Complete Ablation Study - 모든 모델 256d):
+1. W2V-KMeans: Word2Vec(256d) + K-means (no GraphMAE)
+2. BERT-KMeans: DistilBERT(256d) + K-means (no GraphMAE)
+3. W2V-GraphMAE: Word2Vec(256d) + GraphMAE + K-means
+4. BERT-GraphMAE: DistilBERT(256d) + GraphMAE + K-means
+5. Attention-KMeans: Attention Fusion(256d) + K-means (no GraphMAE)
+6. GRACE: Attention Fusion(256d) + GraphMAE + K-means
+
+Note: 모든 모델이 256d로 통일
+      - 단일 모달: W2V(256d), BERT(256d)
+      - 다중 모달: Attention Fusion(256d) - 학습된 융합
+      - Concat 제거: 512d는 차원의 저주로 제외
+      - 공정한 비교: 모든 모델이 동일한 차원에서 경쟁
 
 실험 설정:
 - 데이터: AG News
 - Vocab size: 500
 - Random seeds: [42, 123, 456, 789, 101] (n=5)
-- PCA dim: 256 (각 임베딩)
+- 임베딩 차원: 256d (모든 모델 통일)
 - GraphMAE epochs: 500
 - Edge weight threshold: 5
+- Attention fusion: Gated (기본)
 
 평가 지표:
 - NPMI (주 지표)
@@ -48,7 +56,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent.parent / "core"))
 
 from core.services.GRACE import GRACEConfig, GRACEPipeline
-from core.services.GRACE.ClusteringService import ClusteringService
+from core.services.clustering.ClusteringService import ClusteringService
 from core.services.Metric import MetricsService
 
 
@@ -59,7 +67,7 @@ from core.services.Metric import MetricsService
 EXPERIMENT_CONFIG = {
     # 데이터
     'csv_path': 'data/ag_news.csv',
-    'num_documents': 10000,  # 프로토콜에 따라 조정 가능
+    'num_documents': 10000,  # 각 클래스 2,500개 × 4 = 10,000개 (균형 잡힌 데이터셋)
     'text_column': 'text',
 
     # 그래프
@@ -67,8 +75,11 @@ EXPERIMENT_CONFIG = {
     'exclude_stopwords': True,
     'edge_weight_threshold': 5,
 
-    # 임베딩 (프로토콜: PCA 256차원)
-    'pca_dim': 256,  # 각 임베딩의 차원
+    # 임베딩 (모든 모델 256d 통일)
+    'embed_dim': 256,  # 모든 모델의 임베딩 차원 통일
+
+    # Attention Fusion 설정
+    'fusion_type': 'gated',  # 'cross', 'bidirectional', 'weighted', 'gated'
 
     # GraphMAE
     'graphmae_epochs': 500,
@@ -111,27 +122,38 @@ def set_all_seeds(seed: int):
 def create_grace_config(
     embedding_method: str,
     random_seed: int,
-    use_graphmae: bool = True
+    use_graphmae: bool = True,
+    fusion_type: str = 'gated',
 ) -> GRACEConfig:
-    """실험용 GRACE 설정 생성"""
+    """실험용 GRACE 설정 생성
+
+    Args:
+        embedding_method: 'w2v', 'bert', 'concat', 'attention'
+        random_seed: 랜덤 시드
+        use_graphmae: GraphMAE 사용 여부
+        fusion_type: attention 사용 시 융합 방식 ('cross', 'bidirectional', 'weighted', 'gated')
+    """
+
+    # 모든 모델이 256d로 통일
+    embed_dim = EXPERIMENT_CONFIG['embed_dim']
 
     if embedding_method == 'w2v':
-        # Word2Vec only
-        embed_size = EXPERIMENT_CONFIG['pca_dim']
-        w2v_dim = EXPERIMENT_CONFIG['pca_dim']
+        # Word2Vec only (256d)
+        embed_size = embed_dim
+        w2v_dim = embed_dim
         bert_dim = 0
     elif embedding_method == 'bert':
-        # BERT only
-        embed_size = EXPERIMENT_CONFIG['pca_dim']
+        # BERT only (256d)
+        embed_size = embed_dim
         w2v_dim = 0
-        bert_dim = EXPERIMENT_CONFIG['pca_dim']
-    elif embedding_method == 'concat':
-        # Word2Vec + BERT (concat)
-        embed_size = EXPERIMENT_CONFIG['pca_dim'] * 2  # 512
-        w2v_dim = EXPERIMENT_CONFIG['pca_dim']
-        bert_dim = EXPERIMENT_CONFIG['pca_dim']
+        bert_dim = embed_dim
+    elif embedding_method == 'attention':
+        # Attention Fusion: 256d output (학습된 융합)
+        embed_size = embed_dim
+        w2v_dim = embed_dim
+        bert_dim = embed_dim
     else:
-        raise ValueError(f"Unknown embedding_method: {embedding_method}")
+        raise ValueError(f"Unknown embedding_method: {embedding_method}. Use 'w2v', 'bert', or 'attention'")
 
     config = GRACEConfig(
         # 데이터
@@ -150,6 +172,7 @@ def create_grace_config(
         embed_size=embed_size,
         w2v_dim=w2v_dim,
         bert_dim=bert_dim,
+        fusion_type=fusion_type,  # attention 사용 시
 
         # GraphMAE
         graphmae_epochs=EXPERIMENT_CONFIG['graphmae_epochs'] if use_graphmae else 0,
@@ -185,9 +208,18 @@ def run_single_experiment(
     model_name: str,
     embedding_method: str,
     random_seed: int,
-    use_graphmae: bool = True
+    use_graphmae: bool = True,
+    fusion_type: str = None,
 ) -> Dict[str, Any]:
-    """단일 실험 실행"""
+    """단일 실험 실행
+
+    Args:
+        model_name: 모델 이름
+        embedding_method: 'w2v', 'bert', 'attention'
+        random_seed: 랜덤 시드
+        use_graphmae: GraphMAE 사용 여부
+        fusion_type: attention 사용 시 융합 방식
+    """
 
     print(f"  [Seed {random_seed}] {model_name} 실행 중...")
 
@@ -195,7 +227,7 @@ def run_single_experiment(
     set_all_seeds(random_seed)
 
     # 설정 생성
-    config = create_grace_config(embedding_method, random_seed, use_graphmae)
+    config = create_grace_config(embedding_method, random_seed, use_graphmae, fusion_type)
 
     # 파이프라인 실행
     if use_graphmae:
@@ -203,7 +235,7 @@ def run_single_experiment(
         pipeline = GRACEPipeline(config)
         results = pipeline.run()
     else:
-        # GraphMAE 없이 임베딩만 사용 (Concat-KMeans)
+        # GraphMAE 없이 임베딩만 사용 (W2V-KMeans, BERT-KMeans, Attention-KMeans)
         pipeline = GRACEPipeline(config)
 
         # 1-3단계만 실행 (데이터 로드 ~ 임베딩 계산)
@@ -258,18 +290,31 @@ def run_single_experiment(
 def run_model_experiments(
     model_name: str,
     embedding_method: str,
-    use_graphmae: bool = True
+    use_graphmae: bool = True,
+    fusion_type: str = None,
 ) -> List[Dict[str, Any]]:
-    """모델별 5회 반복 실험"""
+    """모델별 5회 반복 실험
+
+    Args:
+        model_name: 모델 이름
+        embedding_method: 'w2v', 'bert', 'attention'
+        use_graphmae: GraphMAE 사용 여부
+        fusion_type: attention 사용 시 융합 방식
+    """
+
+    # 차원 정보 표시 (모든 모델 256d 통일)
+    dim_info = f"{EXPERIMENT_CONFIG['embed_dim']}d"
+    if embedding_method == 'attention':
+        dim_info += f" (fusion={fusion_type or 'gated'})"
 
     print(f"\n{'='*80}")
     print(f"모델: {model_name}")
-    print(f"  임베딩: {embedding_method}, GraphMAE: {use_graphmae}")
+    print(f"  임베딩: {embedding_method}, GraphMAE: {use_graphmae}, 차원: {dim_info}")
     print(f"{'='*80}")
 
     results = []
     for seed in EXPERIMENT_CONFIG['random_seeds']:
-        result = run_single_experiment(model_name, embedding_method, seed, use_graphmae)
+        result = run_single_experiment(model_name, embedding_method, seed, use_graphmae, fusion_type)
         results.append(result)
 
     return results
@@ -315,28 +360,38 @@ def cohens_d(group1: List[float], group2: List[float]) -> float:
 def perform_statistical_tests(
     all_statistics: Dict[str, Dict[str, Dict[str, float]]]
 ) -> Dict[str, Any]:
-    """통계적 검정 수행 (Ours vs others)"""
+    """통계적 검정 수행
+
+    비교:
+    - GRACE vs all baselines (W2V-KMeans, BERT-KMeans, W2V-GraphMAE, BERT-GraphMAE, Attention-KMeans)
+    """
 
     # Bonferroni correction
-    n_comparisons = 3  # Ours vs (W2V, BERT, Concat)
+    n_comparisons = 5  # GRACE vs (W2V-KMeans, BERT-KMeans, W2V-GraphMAE, BERT-GraphMAE, Attention-KMeans)
     alpha = 0.05
     alpha_corrected = alpha / n_comparisons
 
-    test_results = {}
+    test_results = {
+        'grace_vs_all': {},
+    }
 
     for metric in EXPERIMENT_CONFIG['eval_metrics']:
-        test_results[metric] = {}
+        test_results['grace_vs_all'][metric] = {}
 
-        ours_values = all_statistics['Ours'][metric]['values']
+        grace_values = all_statistics['GRACE'][metric]['values']
 
-        for model_name in ['W2V-KMeans', 'BERT-KMeans', 'Concat-KMeans']:
+        # GRACE vs all baselines
+        for model_name in all_statistics.keys():
+            if model_name == 'GRACE':
+                continue
+
             other_values = all_statistics[model_name][metric]['values']
 
             # Two-tailed t-test
-            t_stat, p_value = stats.ttest_ind(ours_values, other_values)
+            t_stat, p_value = stats.ttest_ind(grace_values, other_values)
 
             # Cohen's d
-            effect_size = cohens_d(ours_values, other_values)
+            effect_size = cohens_d(grace_values, other_values)
 
             # 유의성 판단
             if p_value < alpha_corrected:
@@ -348,7 +403,7 @@ def perform_statistical_tests(
             else:
                 significance = 'ns'
 
-            test_results[metric][model_name] = {
+            test_results['grace_vs_all'][metric][model_name] = {
                 't_statistic': t_stat,
                 'p_value': p_value,
                 'p_value_corrected': alpha_corrected,
@@ -413,8 +468,21 @@ def save_results(
         f.write(header + "\n")
         f.write("-"*100 + "\n")
 
+        # 모델 순서 정의 (6개 모델)
+        model_order = [
+            'W2V-KMeans',
+            'BERT-KMeans',
+            'W2V-GraphMAE',
+            'BERT-GraphMAE',
+            'Attention-KMeans',
+            'GRACE',
+        ]
+
         # Rows
-        for model_name in ['W2V-KMeans', 'BERT-KMeans', 'Concat-KMeans', 'Ours']:
+        for model_name in model_order:
+            if model_name not in all_statistics:
+                continue
+
             stats = all_statistics[model_name]
             row = f"{model_name:<20}"
 
@@ -422,17 +490,27 @@ def save_results(
                 mean = stats[metric]['mean']
                 std = stats[metric]['std']
 
-                # 유의성 표시 (Ours 제외)
+                # 유의성 표시
                 sig = ''
-                if model_name != 'Ours' and test_results[metric][model_name]['significance'] != 'ns':
-                    sig = test_results[metric][model_name]['significance']
+                if model_name != 'GRACE':
+                    # GRACE vs baseline 비교
+                    if model_name in test_results['grace_vs_all'][metric]:
+                        sig_test = test_results['grace_vs_all'][metric][model_name]['significance']
+                        if sig_test != 'ns':
+                            sig = f"({sig_test})"
 
-                row += f"{mean:.3f}±{std:.3f}{sig:>3}   "
+                row += f"{mean:.3f}±{std:.3f}{sig:>6}   "
 
             f.write(row + "\n")
 
         f.write("\n" + "="*100 + "\n")
-        f.write("Significance: *** p < 0.017 (Bonferroni corrected), ** p < 0.01, * p < 0.05\n")
+        f.write("Significance vs GRACE: (***) p < 0.0167 (Bonferroni), (**) p < 0.01, (*) p < 0.05\n")
+        f.write("\nNote: 옵션 1 - 단일(256d) vs 다중(512d) 비교\n")
+        f.write("      - 단일 임베딩: W2V(256d), BERT(256d)\n")
+        f.write("      - 다중 임베딩: Concat(256d+256d=512d), GRACE(256d+256d=512d)\n")
+        f.write("      - 각 임베딩은 독립적으로 256d 공간에서 학습 (n=500 > d=256 ✓)\n")
+        f.write("      - 512d는 두 개의 독립적인 256d 블록 구조\n")
+        f.write("      - Multi-modal learning의 표준 접근 방식\n")
 
     print(f"✓ Table 1 saved: {table1_path}")
 
@@ -452,13 +530,13 @@ def plot_results(
     plots_dir.mkdir(parents=True, exist_ok=True)
 
     # Figure 2: NPMI Comparison (Bar Chart with Error Bars)
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(14, 6))
 
-    models = ['W2V-KMeans', 'BERT-KMeans', 'Concat-KMeans', 'Ours']
+    models = ['W2V-KMeans', 'BERT-KMeans', 'W2V-GraphMAE', 'BERT-GraphMAE', 'Attention-KMeans', 'GRACE']
     npmi_means = [all_statistics[m]['npmi']['mean'] for m in models]
     npmi_stds = [all_statistics[m]['npmi']['std'] for m in models]
 
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
+    colors = ['#1f77b4', '#ff7f0e', '#9467bd', '#8c564b', '#2ca02c', '#d62728']
     bars = ax.bar(models, npmi_means, yerr=npmi_stds, capsize=5,
                    color=colors, alpha=0.7, edgecolor='black')
 
@@ -517,36 +595,57 @@ def main():
     """RQ1 실험 메인 함수"""
 
     print("="*80)
-    print("RQ1 실험: 단일 vs 다중 임베딩 비교")
+    print("RQ1 실험: 단일 vs 다중 임베딩 비교 (모든 모델 256d 통일)")
     print("="*80)
     print(f"데이터: {EXPERIMENT_CONFIG['csv_path']}")
-    print(f"문서 수: {EXPERIMENT_CONFIG['num_documents']}")
+    print(f"문서 수: {EXPERIMENT_CONFIG['num_documents']} (각 클래스 2,500개 × 4)")
     print(f"Vocab: {EXPERIMENT_CONFIG['top_n_words']} 단어")
+    print(f"임베딩 차원: {EXPERIMENT_CONFIG['embed_dim']}d (모든 모델 통일)")
+    print(f"Attention fusion: {EXPERIMENT_CONFIG['fusion_type']}")
     print(f"Random seeds: {EXPERIMENT_CONFIG['random_seeds']}")
     print(f"출력: {EXPERIMENT_CONFIG['output_dir']}")
+    print("\n실험 조건 (6 models, 모두 256d):")
+    print("  1. W2V-KMeans      (W2V 256d,        no GraphMAE)")
+    print("  2. BERT-KMeans     (BERT 256d,       no GraphMAE)")
+    print("  3. W2V-GraphMAE    (W2V 256d,        with GraphMAE)")
+    print("  4. BERT-GraphMAE   (BERT 256d,       with GraphMAE)")
+    print("  5. Attention-KMeans (Attention 256d, no GraphMAE)")
+    print("  6. GRACE           (Attention 256d,  with GraphMAE)")
     print("="*80)
 
     # 결과 저장
     all_results = {}
 
-    # 1. W2V-KMeans
+    # 1. W2V-KMeans (256d, no GraphMAE)
     all_results['W2V-KMeans'] = run_model_experiments(
         'W2V-KMeans', 'w2v', use_graphmae=False
     )
 
-    # 2. BERT-KMeans
+    # 2. BERT-KMeans (256d, no GraphMAE)
     all_results['BERT-KMeans'] = run_model_experiments(
         'BERT-KMeans', 'bert', use_graphmae=False
     )
 
-    # 3. Concat-KMeans (GraphMAE 없이)
-    all_results['Concat-KMeans'] = run_model_experiments(
-        'Concat-KMeans', 'concat', use_graphmae=False
+    # 3. W2V-GraphMAE (256d, with GraphMAE)
+    all_results['W2V-GraphMAE'] = run_model_experiments(
+        'W2V-GraphMAE', 'w2v', use_graphmae=True
     )
 
-    # 4. Ours (GraphMAE 포함)
-    all_results['Ours'] = run_model_experiments(
-        'Ours', 'concat', use_graphmae=True
+    # 4. BERT-GraphMAE (256d, with GraphMAE)
+    all_results['BERT-GraphMAE'] = run_model_experiments(
+        'BERT-GraphMAE', 'bert', use_graphmae=True
+    )
+
+    # 5. Attention-KMeans (256d, no GraphMAE) ⭐ Attention Fusion
+    all_results['Attention-KMeans'] = run_model_experiments(
+        'Attention-KMeans', 'attention', use_graphmae=False,
+        fusion_type=EXPERIMENT_CONFIG['fusion_type']
+    )
+
+    # 6. GRACE (256d, with GraphMAE) ⭐ Attention + GraphMAE
+    all_results['GRACE'] = run_model_experiments(
+        'GRACE', 'attention', use_graphmae=True,
+        fusion_type=EXPERIMENT_CONFIG['fusion_type']
     )
 
     # 통계 계산
