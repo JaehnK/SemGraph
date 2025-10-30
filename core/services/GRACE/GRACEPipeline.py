@@ -413,13 +413,86 @@ class GRACEPipeline:
     # 유틸리티 메서드
     # ============================================================
 
-    def _build_cluster_info(self) -> Dict[int, List[str]]:
-        """클러스터별 단어 정보 구성"""
+    def _get_sample_sentences_for_cluster(self, cluster_words: List[str], max_samples: int = 10) -> List[str]:
+        """
+        클러스터의 단어들을 가장 많이 포함한 문장들을 반환
+
+        Args:
+            cluster_words: 클러스터에 속한 단어 리스트
+            max_samples: 반환할 최대 문장 수
+
+        Returns:
+            클러스터 단어를 많이 포함한 문장 리스트 (매칭 개수 내림차순 정렬)
+        """
+        if self.doc_service is None or self.doc_service.sentence_list is None:
+            return []
+
+        # 각 문장에 대해 클러스터 단어 매칭 개수 계산
+        sentence_scores = []
+        cluster_words_lower = set(w.lower() for w in cluster_words)
+
+        for sentence in self.doc_service.sentence_list:
+            # 문장에 포함된 단어들 중 클러스터 단어와 매칭되는 개수 계산
+            sentence_words = set(w.content.lower() for w in sentence.word_objects)
+            match_count = len(sentence_words & cluster_words_lower)
+
+            if match_count > 0:  # 최소 1개 이상 매칭된 문장만
+                sentence_scores.append((sentence.raw, match_count))
+
+        # 매칭 개수 기준 내림차순 정렬
+        sentence_scores.sort(key=lambda x: x[1], reverse=True)
+
+        # 상위 max_samples개 문장만 반환
+        return [sent for sent, _ in sentence_scores[:max_samples]]
+
+    def _build_cluster_info(self, include_samples: bool = True, max_samples: int = 10) -> Dict[int, Dict[str, Any]]:
+        """
+        클러스터별 단어 정보 구성 (빈도 및 예시 문장 포함)
+
+        Args:
+            include_samples: 예시 문장 포함 여부
+            max_samples: 클러스터당 최대 예시 문장 수
+
+        Returns:
+            클러스터 정보 딕셔너리
+            {
+                cluster_id: {
+                    "words": [{"word": str, "frequency": int}, ...],
+                    "sample_documents": [str, ...]  # 클러스터 단어를 많이 포함한 문장들
+                }
+            }
+        """
         cluster_info = {}
+
         for cluster_id in np.unique(self.cluster_labels):
             indices = np.where(self.cluster_labels == cluster_id)[0]
-            words = [self.word_graph.words[i].content for i in indices]
-            cluster_info[int(cluster_id)] = words
+
+            # 단어 정보 수집 (빈도 포함)
+            words_with_freq = [
+                {
+                    "word": self.word_graph.words[i].content,
+                    "frequency": self.word_graph.words[i].freq
+                }
+                for i in indices
+            ]
+
+            # 빈도 기준 내림차순 정렬
+            words_with_freq.sort(key=lambda x: x["frequency"], reverse=True)
+
+            cluster_data = {
+                "words": words_with_freq
+            }
+
+            # 예시 문장 추가
+            if include_samples:
+                cluster_words = [w["word"] for w in words_with_freq]
+                cluster_data["sample_documents"] = self._get_sample_sentences_for_cluster(
+                    cluster_words,
+                    max_samples=max_samples
+                )
+
+            cluster_info[int(cluster_id)] = cluster_data
+
         return cluster_info
 
     def _save_results(self, results: Dict[str, Any]) -> None:
@@ -474,7 +547,12 @@ class GRACEPipeline:
 
         # 2. 워드클라우드
         try:
-            cluster_words = self._build_cluster_info()
+            # 워드클라우드용 단어 리스트 추출 (샘플 문장 제외)
+            cluster_info = self._build_cluster_info(include_samples=False)
+            cluster_words = {
+                cid: [w["word"] for w in cdata["words"]]
+                for cid, cdata in cluster_info.items()
+            }
             wordcloud_path = viz_service.visualize_cluster_words(
                 cluster_words=cluster_words,
                 filename=f'wordcloud_{timestamp}.png',

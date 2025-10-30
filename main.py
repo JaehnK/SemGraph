@@ -135,12 +135,22 @@ def run_training(config: GRACEConfig, verbose: bool = True):
             print(f"  Cluster {cluster_id:2d}: {count:4d} words")
 
     # 상위 단어 출력 (각 클러스터별)
-    if 'cluster_top_words' in results:
-        print(f"\n{Fore.YELLOW}Top Words per Cluster:{Style.RESET_ALL}")
-        for cluster_id, top_words in list(results['cluster_top_words'].items())[:5]:
-            words = ', '.join(top_words[:10])
+    if 'clusters' in results:
+        print(f"\n{Fore.YELLOW}Top Words per Cluster (with frequencies):{Style.RESET_ALL}")
+        for cluster_id, cluster_data in list(results['clusters'].items())[:5]:
+            # 상위 10개 단어만 표시
+            word_items = cluster_data.get("words", [])[:10]
+            words_display = ', '.join([f"{item['word']}({item['frequency']})" for item in word_items])
             print(f"\n  {Fore.CYAN}Cluster {cluster_id}{Style.RESET_ALL}:")
-            print(f"    {words}")
+            print(f"    Words: {words_display}")
+
+            # 예시 문장도 출력 (첫 번째만)
+            if 'sample_documents' in cluster_data and cluster_data['sample_documents']:
+                sample = cluster_data['sample_documents'][0]
+                # 너무 길면 100자로 자르기
+                if len(sample) > 100:
+                    sample = sample[:100] + "..."
+                print(f"    {Fore.GREEN}Sample:{Style.RESET_ALL} {sample}")
 
     print(f"\n{Fore.GREEN}✓ Training completed successfully!{Style.RESET_ALL}\n")
     print(f"  Results saved to: {config.output_dir}")
