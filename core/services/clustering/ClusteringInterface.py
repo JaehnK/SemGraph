@@ -138,14 +138,12 @@ class ClusteringInterface(ABC):
         if len(k_values) < 3:
             return k_values[0]
 
-        # 정규화된 inertia 계산
+        # 2차 미분을 사용한 엘보우 포인트 검출
         inertias_norm = np.array(inertias)
-        inertias_norm = (inertias_norm - inertias_norm.min()) / (inertias_norm.max() - inertias_norm.min())
+        inertias_norm = (inertias_norm - inertias_norm.min()) / \
+                       (inertias_norm.max() - inertias_norm.min())
 
-        # 2차 미분 (곡률) 계산
         second_derivative = np.diff(inertias_norm, 2)
-
-        # 곡률이 최대인 지점 = elbow point
-        elbow_idx = np.argmax(second_derivative) + 1  # diff로 인한 인덱스 조정
+        elbow_idx = np.argmax(second_derivative) + 1
 
         return k_values[elbow_idx]

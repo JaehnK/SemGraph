@@ -46,9 +46,11 @@ class GRACEPipeline:
         # 재현성을 위한 랜덤 시드 고정 (전역)
         import random
         import numpy as np
+        import dgl
         torch.manual_seed(self.config.random_seed)
         np.random.seed(self.config.random_seed)
         random.seed(self.config.random_seed)
+        dgl.seed(self.config.random_seed)  # DGL 랜덤 시드
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(self.config.random_seed)
             # CUDA 연산의 재현성 보장
@@ -328,20 +330,24 @@ class GRACEPipeline:
             )
             self._log(f"  Spherical K-means 완료: {self.config.num_clusters}개 클러스터")
         else:
-            # Elbow Method로 최적 클러스터 수 탐색
-            self._log(f"  Elbow Method로 최적 클러스터 수 탐색 중 ({self.config.min_clusters}-{self.config.max_clusters})...")
+            # Kneedle 알고리즘으로 최적 클러스터 수 탐색
+            self._log(f"  Kneedle 알고리즘으로 최적 클러스터 수 탐색 중 ({self.config.min_clusters}-{self.config.max_clusters})...")
 
             self.cluster_labels, best_k, inertias, silhouette_scores = \
                 self.clustering_service.auto_clustering(
                     self.graphmae_embeddings,
                     min_clusters=self.config.min_clusters,
-                    max_clusters=self.config.max_clusters,
-                    n_init=10
+                    max_clusters=self.config.max_clusters
+                    # method='kneedle' (기본값)
+                    # n_init=3 (기본값)
                 )
 
             k_range = range(self.config.min_clusters, self.config.max_clusters + 1)
-            self._log(f"  Elbow Point: k={best_k}")
-            self._log(f"  최적 클러스터 수: {best_k} (Silhouette: {silhouette_scores[best_k - self.config.min_clusters]:.4f})")
+            self._log(f"  Kneedle 탐지: k={best_k}")
+            if silhouette_scores and len(silhouette_scores) > best_k - self.config.min_clusters:
+                self._log(f"  최적 클러스터 수: {best_k} (Silhouette: {silhouette_scores[best_k - self.config.min_clusters]:.4f})")
+            else:
+                self._log(f"  최적 클러스터 수: {best_k}")
 
             # Elbow curve 시각화 저장
             if self.config.save_graph_viz:
@@ -480,22 +486,36 @@ class GRACEPipeline:
         except Exception as e:
             self._log(f"    ✗ Word Cloud 실패: {e}")
 
-        # 3. 네트워크 그래프
-        try:
-            # 엣지가 너무 많으면 상위 1000개만 표시
-            max_edges = 1000 if self.word_graph.num_edges > 1000 else None
-            network_path = viz_service.visualize_network(
-                word_graph=self.word_graph,
-                cluster_labels=labels,
-                filename=f'network_{timestamp}.png',
-                title='Semantic Network with Clusters',
-                max_edges=max_edges
-            )
-            self._log(f"    ✓ Network Graph: {network_path.name}")
-        except ImportError:
-            self._log(f"    ✗ Network Graph 건너뛰기 (networkx 패키지 필요)")
-        except Exception as e:
-            self._log(f"    ✗ Network Graph 실패: {e}")
+        # 3. 네트워크 그래프 (선택적)
+        # 네트워크 시각화는 시간이 오래 걸리므로 config에서 제어
+        if self.config.save_network_viz:
+            try:
+                # 엣지가 너무 많으면 상위 N개만 표시 (가독성을 위해)
+                # 노드 수에 비례하여 엣지 수 조정
+                if self.word_graph.num_edges > 500:
+                    max_edges = min(500, self.word_graph.num_nodes * 2)
+                else:
+                    max_edges = None
+
+                self._log(f"    Starting network visualization (nodes: {self.word_graph.num_nodes}, edges: {self.word_graph.num_edges}, showing: {max_edges if max_edges else 'all'})...")
+                network_path = viz_service.visualize_network(
+                    word_graph=self.word_graph,
+                    cluster_labels=labels,
+                    filename=f'network_{timestamp}.png',
+                    title='Semantic Network with Clusters',
+                    max_edges=max_edges,
+                    random_seed=self.config.random_seed
+                )
+                self._log(f"    ✓ Network Graph: {network_path.name}")
+            except ImportError as e:
+                self._log(f"    ✗ Network Graph 건너뛰기 (networkx 패키지 필요): {e}")
+            except Exception as e:
+                self._log(f"    ✗ Network Graph 실패: {e}")
+                if self.config.verbose:
+                    import traceback
+                    traceback.print_exc()
+        else:
+            self._log(f"    ○ Network Graph: 건너뛰기 (save_network_viz=False)")
 
     def _log(self, message: str) -> None:
         """로그 출력"""

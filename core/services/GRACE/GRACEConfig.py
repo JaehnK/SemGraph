@@ -55,7 +55,8 @@ class GRACEConfig:
     # === 출력 설정 ===
     save_results: bool = True
     output_dir: str = './grace_output'
-    save_graph_viz: bool = True
+    save_graph_viz: bool = True  # t-SNE, Word Cloud 등
+    save_network_viz: bool = False  # 네트워크 그래프 (시간 소요)
     save_embeddings: bool = True
 
     # === 디버그 설정 ===

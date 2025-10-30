@@ -82,18 +82,20 @@ EXPERIMENT_CONFIG = {
     'fusion_type': 'gated',  # 'cross', 'bidirectional', 'weighted', 'gated'
 
     # GraphMAE
-    'graphmae_epochs': 500,
+    'graphmae_epochs': 1000,
     'mask_rate': 0.5,  # 프로토콜 기본값
     'encoder_type': 'gat',
     'decoder_type': 'gat',
 
     # 클러스터링
     'clustering_method': 'kmeans',
-    'min_clusters': 5,
+    'min_clusters': 3,
     'max_clusters': 20,
 
     # 재현성
-    'random_seeds': [42, 123, 456, 789, 101],
+    'random_seeds': [42, 123, 456, 789, 101, 222, 333, 444, 555, 666, 
+                 777, 888, 999, 111, 234, 345, 567, 678, 890, 1001,
+                 1111, 1234, 1357, 2468, 3690, 4802, 5913, 6024, 7135, 8246],
 
     # 평가
     'eval_metrics': ['silhouette', 'davies_bouldin', 'calinski_harabasz', 'npmi'],

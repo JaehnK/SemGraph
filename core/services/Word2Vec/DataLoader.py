@@ -5,21 +5,26 @@ from typing import List, Dict, Tuple, Any
 
 class MemoryDataLoader:
     """메모리 기반 Word2Vec 데이터 로더"""
-    
+
     NEGATIVE_TABLE_SIZE = int(1e8)
-    
-    def __init__(self, 
-                 sentences: List[List[int]], 
+
+    def __init__(self,
+                 sentences: List[List[int]],
                  word2id: Dict[str, int],
                  id2word: Dict[int, str],
                  word_frequency: Dict[int, int],
-                 min_count: int = 5):
-        
+                 min_count: int = 5,
+                 random_seed: int = 42):
+
         self.sentences = sentences
         self.word2id = word2id
         self.id2word = id2word
         self.word_frequency = word_frequency
         self.min_count = min_count
+        self.random_seed = random_seed
+
+        # NumPy random generator 생성 (재현성 보장)
+        self.rng = np.random.default_rng(random_seed)
         
         # 통계 정보
         self.sentences_count = len(sentences)
@@ -41,20 +46,20 @@ class MemoryDataLoader:
         """Negative sampling을 위한 테이블 초기화"""
         if not self.word_frequency:
             return
-            
+
         # 0.75제곱으로 빈도 조정 (원래 Word2Vec 논문 설정)
         pow_frequency = np.array(list(self.word_frequency.values())) ** 0.75
         words_pow = sum(pow_frequency)
         ratio = pow_frequency / words_pow
         count = np.round(ratio * self.NEGATIVE_TABLE_SIZE)
-        
+
         # 각 단어 ID를 빈도에 비례해서 테이블에 추가
         for wid, c in enumerate(count):
             self.negatives += [wid] * int(c)
-        
+
         self.negatives = np.array(self.negatives)
-        np.random.shuffle(self.negatives)
-        
+        self.rng.shuffle(self.negatives)
+
         print(f"Negative sampling table created with {len(self.negatives)} entries")
     
     def _init_discard_table(self):
@@ -72,7 +77,7 @@ class MemoryDataLoader:
     def get_negatives(self, target: int, size: int) -> np.ndarray:
         """Negative samples 반환 (pos와 동일 ID 제외)"""
         if len(self.negatives) == 0:
-            response = np.random.randint(0, self.vocab_size, size)
+            response = self.rng.integers(0, self.vocab_size, size)
         else:
             response = self.negatives[self.negpos:self.negpos + size]
             self.negpos = (self.negpos + size) % len(self.negatives)
@@ -81,22 +86,22 @@ class MemoryDataLoader:
                 remaining = size - len(response)
                 additional = self.negatives[:remaining]
                 response = np.concatenate((response, additional))
-        
+
         # 인덱스가 vocab_size를 초과하지 않도록 클리핑
         response = np.clip(response, 0, self.vocab_size - 1)
-        
+
         # target과 동일한 음성 샘플은 재샘플링하여 치환
         if self.vocab_size > 1:
             mask = (response == target)
             if np.any(mask):
                 # 동일한 개수만큼 재샘플 후 치환 (최소 충돌 회피)
-                resample = np.random.randint(0, self.vocab_size, mask.sum())
+                resample = self.rng.integers(0, self.vocab_size, mask.sum())
                 # 혹시 또 target이 나올 수 있으니 한 번 더 보정
                 second_mask = (resample == target)
                 if np.any(second_mask):
                     resample[second_mask] = (resample[second_mask] + 1) % self.vocab_size
                 response[mask] = resample
-        
+
         return response
     
     def should_discard(self, word_id: int) -> bool:
@@ -104,7 +109,7 @@ class MemoryDataLoader:
         if word_id >= len(self.discards) or word_id < 0:
             return False
         keep_prob = self.discards[word_id]
-        return np.random.rand() > keep_prob
+        return self.rng.random() > keep_prob
 
 
 class MemoryWord2vecDataset(Dataset):
@@ -151,8 +156,8 @@ class MemoryWord2vecDataset(Dataset):
             # Skip-gram 페어 생성
             for i, center_word in enumerate(filtered_sentence):
                 # 윈도우 크기를 랜덤하게 조정 (1 ~ window_size)
-                actual_window = np.random.randint(1, self.window_size + 1)
-                
+                actual_window = self.data_loader.rng.integers(1, self.window_size + 1)
+
                 # 문맥 단어들 추출
                 start = max(0, i - actual_window)
                 end = min(len(filtered_sentence), i + actual_window + 1)

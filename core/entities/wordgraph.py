@@ -120,7 +120,34 @@ class WordGraph:
     @property
     def metadata(self) -> Optional[GraphMetadata]:
         return self._metadata
-    
+
+    @property
+    def edge_matrix(self) -> np.ndarray:
+        """
+        엣지 인덱스를 인접 행렬로 변환하여 반환 (시각화용)
+
+        Returns:
+            [num_nodes, num_nodes] 형태의 인접 행렬 (가중치 포함)
+        """
+        # 인접 행렬 초기화
+        matrix = np.zeros((self.num_nodes, self.num_nodes), dtype=np.float32)
+
+        if self._edge_index is not None and self._edge_attr is not None:
+            edge_index_np = self._edge_index.cpu().numpy()
+            edge_attr_np = self._edge_attr.cpu().numpy()
+
+            # edge_index에서 (src, dst) 쌍을 가져와 행렬에 가중치 할당
+            for idx in range(edge_index_np.shape[1]):
+                src = edge_index_np[0, idx]
+                dst = edge_index_np[1, idx]
+                weight = edge_attr_np[idx, 0]  # 첫 번째 특성을 가중치로 사용
+
+                # 무향 그래프로 가정하여 대칭 행렬로 만듦
+                matrix[src, dst] = weight
+                matrix[dst, src] = weight
+
+        return matrix
+
     # === 노드 특성 설정 ===
     
     def set_node_features_from_frequency(self) -> None:

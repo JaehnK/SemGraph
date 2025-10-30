@@ -35,6 +35,12 @@ import itertools
 from typing import Dict, List, Tuple, Any
 from copy import deepcopy
 
+# 재현성을 위한 멀티스레딩 제한 (import 전에 설정)
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['NUMEXPR_NUM_THREADS'] = '1'
+
 # PYTHONPATH 설정
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parent / "core"))
@@ -98,7 +104,7 @@ def create_base_config() -> GRACEConfig:
         # 출력
         save_results=True,
         output_dir="results/ablation",
-        save_graph_viz=False,  # ablation에서는 빠르게
+        save_graph_viz=True,  # 네트워크 시각화 활성화
         save_embeddings=False,
 
         # 디버그

@@ -53,6 +53,10 @@ class GraphMAEService:
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
 
+        # 재현성을 위한 독립적인 generator 생성
+        generator = torch.Generator()
+        generator.manual_seed(random_seed)
+
         model = PreModel(
             in_dim=input_dim,
             num_hidden=self.config.hidden_dim,
@@ -80,7 +84,8 @@ class GraphMAEService:
             delayed_ema_epoch=self.config.delayed_ema_epoch,
             momentum=self.config.momentum,
             replace_rate=self.config.replace_rate,
-            zero_init=self.config.zero_init
+            zero_init=self.config.zero_init,
+            generator=generator
         )
 
         return model

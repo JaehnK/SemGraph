@@ -17,6 +17,12 @@ from pathlib import Path
 import json
 import torch
 
+# 재현성을 위한 멀티스레딩 제한 (import 전에 설정)
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['NUMEXPR_NUM_THREADS'] = '1'
+
 import warnings
 warnings.filterwarnings('ignore', category=UserWarning, module='torch_geometric')
 
@@ -76,9 +82,9 @@ def create_default_config() -> GRACEConfig:
 
         # 클러스터링
         clustering_method='kmeans',
-        num_clusters=None,  # Elbow method로 자동 결정
+        num_clusters=None,  # Kneedle 알고리즘으로 자동 결정
         min_clusters=3,
-        max_clusters=20,
+        max_clusters=10,
 
         # 평가
         eval_metrics=['silhouette', 'davies_bouldin', 'calinski_harabasz', 'npmi'],
@@ -86,7 +92,8 @@ def create_default_config() -> GRACEConfig:
         # 출력
         save_results=True,
         output_dir="results",
-        save_graph_viz=True,
+        save_graph_viz=True,  # t-SNE, Word Cloud
+        save_network_viz=False,  # 네트워크 그래프 비활성화 (시간 소요)
         save_embeddings=True,
 
         # 디버그

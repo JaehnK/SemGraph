@@ -455,7 +455,8 @@ class PlotGenerator:
         node_size_scale: float = 300,
         edge_width_scale: float = 0.5,
         k: float = 2.0,
-        max_edges: Optional[int] = None
+        max_edges: Optional[int] = None,
+        random_seed: int = 42
     ):
         """
         의미연결망을 클러스터별 색상으로 시각화.
@@ -470,6 +471,7 @@ class PlotGenerator:
             edge_width_scale: 엣지 두께 스케일 (가중치에 따라)
             k: 노드 간 거리 (spring layout)
             max_edges: 표시할 최대 엣지 수 (None이면 모두 표시)
+            random_seed: 재현성을 위한 랜덤 시드
         """
         try:
             import networkx as nx
@@ -504,8 +506,17 @@ class PlotGenerator:
         for i, j, weight in edges_with_weights:
             G.add_edge(i, j, weight=weight)
 
-        # 레이아웃 계산 (spring layout)
-        pos = nx.spring_layout(G, k=k, iterations=50, seed=42)
+        # 레이아웃 계산 (Kamada-Kawai는 큰 그래프에 더 적합)
+        # 노드가 많으면 spring_layout 대신 다른 알고리즘 사용
+        if len(G.nodes()) > 100:
+            # Kamada-Kawai: 더 균등한 분포
+            try:
+                pos = nx.kamada_kawai_layout(G)
+            except:
+                # 실패하면 spring layout 사용
+                pos = nx.spring_layout(G, k=k*2, iterations=100, seed=random_seed)
+        else:
+            pos = nx.spring_layout(G, k=k, iterations=100, seed=random_seed)
 
         # 클러스터별 색상
         unique_clusters = np.unique(cluster_labels)
@@ -514,24 +525,26 @@ class PlotGenerator:
 
         # 노드 색상 및 크기
         node_colors = [cluster_colors[G.nodes[node]['cluster']] for node in G.nodes()]
-        node_sizes = [G.nodes[node]['freq'] * node_size_scale for node in G.nodes()]
+        # 노드 크기를 줄여서 겹침 방지 (빈도에 로그 스케일 적용)
+        node_sizes = [np.log1p(G.nodes[node]['freq']) * node_size_scale * 0.5 for node in G.nodes()]
 
-        # 엣지 가중치 정규화
+        # 엣지 가중치 정규화 (더 얇게)
         edge_weights = [G[u][v]['weight'] for u, v in G.edges()]
         if edge_weights:
             max_weight = max(edge_weights)
-            edge_widths = [w / max_weight * edge_width_scale * 10 for w in edge_weights]
+            # 엣지 두께를 더 얇게 조정
+            edge_widths = [w / max_weight * edge_width_scale * 3 for w in edge_weights]
         else:
-            edge_widths = [1.0]
+            edge_widths = [0.5]
 
         # 플롯 그리기
         fig, ax = plt.subplots(figsize=figsize)
 
-        # 엣지 그리기
+        # 엣지 그리기 (더 투명하게)
         nx.draw_networkx_edges(
             G, pos,
             width=edge_widths,
-            alpha=0.3,
+            alpha=0.1,  # 훨씬 더 투명하게
             edge_color='gray',
             ax=ax
         )
@@ -541,12 +554,14 @@ class PlotGenerator:
             G, pos,
             node_color=node_colors,
             node_size=node_sizes,
-            alpha=0.8,
+            alpha=0.9,  # 노드는 더 불투명하게
+            linewidths=1,  # 테두리 추가
+            edgecolors='white',  # 흰색 테두리로 구분
             ax=ax
         )
 
-        # 레이블 그리기 (상위 빈도 노드만)
-        top_n_labels = 30  # 상위 30개 단어만 레이블 표시
+        # 레이블 그리기 (상위 빈도 노드만, 더 적게)
+        top_n_labels = min(20, len(G.nodes()) // 10)  # 노드 수의 10% 또는 최대 20개
         node_freqs = [(node, G.nodes[node]['freq']) for node in G.nodes()]
         node_freqs.sort(key=lambda x: x[1], reverse=True)
         top_nodes = {node for node, _ in node_freqs[:top_n_labels]}
@@ -555,8 +570,10 @@ class PlotGenerator:
         nx.draw_networkx_labels(
             G, pos,
             labels=labels,
-            font_size=8,
+            font_size=9,
             font_weight='bold',
+            font_color='black',
+            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='none', alpha=0.7),
             ax=ax
         )
 

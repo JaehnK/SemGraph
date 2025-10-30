@@ -355,7 +355,8 @@ class VisualizationService:
         node_size_scale: float = 300,
         edge_width_scale: float = 0.5,
         k: float = 2.0,
-        max_edges: Optional[int] = None
+        max_edges: Optional[int] = None,
+        random_seed: int = 42
     ) -> Path:
         """
         의미연결망을 클러스터별 색상으로 시각화.
@@ -369,6 +370,7 @@ class VisualizationService:
             edge_width_scale: 엣지 두께 스케일 (가중치에 따라)
             k: 노드 간 거리 (spring layout)
             max_edges: 표시할 최대 엣지 수 (None이면 모두 표시)
+            random_seed: 재현성을 위한 랜덤 시드
 
         Returns:
             저장된 파일 경로
@@ -387,7 +389,8 @@ class VisualizationService:
             node_size_scale=node_size_scale,
             edge_width_scale=edge_width_scale,
             k=k,
-            max_edges=max_edges
+            max_edges=max_edges,
+            random_seed=random_seed
         )
 
         self.logger.info(f"Saved network visualization to {save_path}")

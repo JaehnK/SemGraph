@@ -26,7 +26,7 @@ class NodeFeatureHandler:
         self.random_seed = random_seed
         # Word2VecService 동적 import 및 초기화
         from ..Word2Vec.Word2VecService import Word2VecService as W2VService
-        self.w2v = W2VService.create_default(docs, min_count=min_count)
+        self.w2v = W2VService.create_default(docs, min_count=min_count, random_seed=random_seed)
         self.dbert = BertService(docs)
 
     def calculate_embeddings(self, words: List[Word], method: str = 'concat', embed_size: int = 64,

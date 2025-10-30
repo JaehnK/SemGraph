@@ -31,12 +31,12 @@ class Word2VecService:
         self.training_history = []
     
     @classmethod
-    def create_default(cls, doc_service: DocumentService, min_count: int = 1) -> 'Word2VecService':
+    def create_default(cls, doc_service: DocumentService, min_count: int = 1, random_seed: int = 42) -> 'Word2VecService':
         """기본 설정으로 Word2Vec 서비스 생성"""
 
         # 문서 서비스에서 필요한 데이터 추출
         word_data = doc_service.get_word2vec_data(min_count=min_count) # 이제 0-indexed ID를 반환
-        
+
         # DocumentService에서 원래 문장 인덱스를 가져오는 대신,
         # 직접 단어 콘텐츠를 사용하여 새로운 0-indexed ID로 매핑
         # 이렇게 하면 DocumentService의 원본 ID와 Word2Vec 모델의 0-indexed ID 간의 불일치 문제 해결
@@ -54,7 +54,7 @@ class Word2VecService:
                 sentences_with_indices.append(remapped_sentence)
 
         print(f"Creating Word2Vec service with vocabulary size: {word_data['vocab_size']}")
-        
+
         # 모델 생성
         model = SkipGramModel(word_data['vocab_size'], emb_dimension=300)
 
@@ -63,26 +63,28 @@ class Word2VecService:
             sentences=sentences_with_indices,
             word2id=word_data['word2id'],
             id2word=word_data['id2word'],
-            word_frequency=word_data['word_frequency']
+            word_frequency=word_data['word_frequency'],
+            random_seed=random_seed
         )
 
         # 데이터셋 생성
         dataset = MemoryWord2vecDataset(data_loader, window_size=5)
 
-        # 트레이너 생성
-        trainer = Word2VecTrainer(iterations=10, initial_lr=0.025, batch_size=300)
-        
+        # 트레이너 생성 (random_seed 전달)
+        trainer = Word2VecTrainer(iterations=10, initial_lr=0.025, batch_size=300, random_seed=random_seed)
+
         return cls(doc_service, model, trainer, dataset, data_loader)
     
     @classmethod
-    def create_custom(cls, 
+    def create_custom(cls,
                     doc_service: DocumentService,
                     embedding_dim: int = 100,
                     window_size: int = 5,
                     iterations: int = 30,
                     learning_rate: float = 0.001,
                     batch_size: int = 32,
-                    min_count: int = 5) -> 'Word2VecService':
+                    min_count: int = 5,
+                    random_seed: int = 42) -> 'Word2VecService':
         """커스텀 설정으로 Word2Vec 서비스 생성"""
         
         word_data = doc_service.get_word2vec_data(min_count=min_count) # 이제 0-indexed ID를 반환
@@ -106,16 +108,18 @@ class Word2VecService:
             word2id=word_data['word2id'],
             id2word=word_data['id2word'],
             word_frequency=word_data['word_frequency'],
-            min_count=min_count
+            min_count=min_count,
+            random_seed=random_seed
         )
         
         dataset = MemoryWord2vecDataset(data_loader, window_size=window_size)
         trainer = Word2VecTrainer(
-            iterations=iterations, 
-            initial_lr=learning_rate, 
-            batch_size=batch_size
+            iterations=iterations,
+            initial_lr=learning_rate,
+            batch_size=batch_size,
+            random_seed=random_seed
         )
-        
+
         return cls(doc_service, model, trainer, dataset, data_loader)
     
     def train(self, output_file: str = "word2vec_embeddings.txt") -> 'Word2VecService':

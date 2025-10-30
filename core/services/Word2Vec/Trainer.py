@@ -53,15 +53,20 @@ class Word2VecTrainer:
         # 모델을 디바이스로 이동
         model.to(self.device)
         model.train()
-        
+
+        # 재현성을 위한 generator 생성
+        g = torch.Generator()
+        g.manual_seed(self.random_seed)
+
         # DataLoader 생성
         torch_dataloader = DataLoader(
             dataset,
             batch_size=self.batch_size,
             shuffle=True,
-            num_workers=4,  # 데이터 로딩 병렬화
-            pin_memory=True,  # GPU 전송 속도 향상
-            collate_fn=dataset.collate_fn
+            num_workers=0,  # 재현성을 위해 멀티프로세싱 비활성화
+            pin_memory=True if self.use_cuda else False,  # GPU 전송 속도 향상
+            collate_fn=dataset.collate_fn,
+            generator=g  # 재현성을 위한 generator
         )
         
         print(f"Starting training with {len(dataset)} training pairs")
