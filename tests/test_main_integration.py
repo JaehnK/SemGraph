@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-main.py 통합 테스트 - Gap Statistics가 자동으로 적용되는지 확인
+pipelines/main.py 통합 테스트 - Gap Statistics가 자동으로 적용되는지 확인
 """
 
 import sys
@@ -95,7 +95,7 @@ def test_grace_pipeline_uses_gap_statistics():
 
 def main():
     """메인 함수"""
-    print("main.py 통합 테스트\n")
+    print("pipelines/main.py 통합 테스트\n")
     print("이 테스트는 GRACEPipeline이 Gap Statistics를")
     print("기본 클러스터링 방법으로 사용하는지 확인합니다.\n")
 
@@ -105,12 +105,12 @@ def main():
         print("\n" + "=" * 70)
         print("요약")
         print("=" * 70)
-        print("✓ main.py를 실행하면 Gap Statistics가 자동으로 적용됩니다.")
+        print("✓ pipelines/main.py를 실행하면 Gap Statistics가 자동으로 적용됩니다.")
         print("✓ 기본 파라미터: max_clusters=10, n_init=3, n_iterations=10")
         print("✓ 별도의 설정 변경 없이 바로 사용 가능합니다.")
         print()
         print("실제 실행 명령:")
-        print("  python main.py --mode train --max-docs 1000")
+        print("  python pipelines/main.py --mode train --max-docs 1000")
         print("=" * 70)
     else:
         print("\n테스트 실패")

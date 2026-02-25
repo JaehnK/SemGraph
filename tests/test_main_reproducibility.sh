@@ -7,22 +7,22 @@ echo "Main.py 재현성 테스트"
 echo "======================================================================"
 
 # 기존 테스트 결과 삭제
-rm -rf results/test_repro1 results/test_repro2
+rm -rf artifacts/runs/results/test_repro1 artifacts/runs/results/test_repro2
 
 # 첫 번째 실행
 echo ""
 echo "첫 번째 실행..."
-/home/jaehun/anaconda3/envs/SENTIMENT/bin/python main.py \
+/home/jaehun/anaconda3/envs/SENTIMENT/bin/python pipelines/main.py \
     --mode train \
     --random-seed 42 \
     --max-docs 1000 \
     --epochs 100 \
-    --output results/test_repro1 \
+    --output artifacts/runs/results/test_repro1 \
     --device cpu
 
 # 결과 추출
-k1=$(grep -oP 'Optimal k: \K\d+' results/test_repro1/grace_results_*.json | head -1)
-sil1=$(grep -oP '"silhouette": \K[0-9.]+' results/test_repro1/grace_results_*.json | head -1)
+k1=$(grep -oP 'Optimal k: \K\d+' artifacts/runs/results/test_repro1/grace_results_*.json | head -1)
+sil1=$(grep -oP '"silhouette": \K[0-9.]+' artifacts/runs/results/test_repro1/grace_results_*.json | head -1)
 
 echo ""
 echo "첫 번째 결과: k=$k1, Silhouette=$sil1"
@@ -30,17 +30,17 @@ echo "첫 번째 결과: k=$k1, Silhouette=$sil1"
 # 두 번째 실행
 echo ""
 echo "두 번째 실행..."
-/home/jaehun/anaconda3/envs/SENTIMENT/bin/python main.py \
+/home/jaehun/anaconda3/envs/SENTIMENT/bin/python pipelines/main.py \
     --mode train \
     --random-seed 42 \
     --max-docs 1000 \
     --epochs 100 \
-    --output results/test_repro2 \
+    --output artifacts/runs/results/test_repro2 \
     --device cpu
 
 # 결과 추출
-k2=$(grep -oP 'Optimal k: \K\d+' results/test_repro2/grace_results_*.json | head -1)
-sil2=$(grep -oP '"silhouette": \K[0-9.]+' results/test_repro2/grace_results_*.json | head -1)
+k2=$(grep -oP 'Optimal k: \K\d+' artifacts/runs/results/test_repro2/grace_results_*.json | head -1)
+sil2=$(grep -oP '"silhouette": \K[0-9.]+' artifacts/runs/results/test_repro2/grace_results_*.json | head -1)
 
 echo ""
 echo "두 번째 결과: k=$k2, Silhouette=$sil2"

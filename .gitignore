@@ -1,170 +1,89 @@
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
+# -----------------------------------------------------------------------------
+# Python cache/build
+# -----------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.so
+*.o
+*.a
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
 .coverage
 .coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
+htmlcov/
 
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
-
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
+# -----------------------------------------------------------------------------
+# Virtual env / local env
+# -----------------------------------------------------------------------------
 .env
-.venv
-env/
+.venv/
 venv/
 ENV/
-env.bak/
-venv.bak/
+env/
+.python-version
 
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# CSV files
-*.csv
-
-# Data files (commonly used extensions)
-*.xlsx
-*.xls
-*.json
-*.jsonl
-*.parquet
-*.pickle
-*.pkl
-*.h5
-*.hdf5
-
-# Model files
-*.model
-*.bin
-*.pt
-*.pth
-*.ckpt
-*.h5
-
-# IDE files
+# -----------------------------------------------------------------------------
+# IDE / OS
+# -----------------------------------------------------------------------------
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
-
-# macOS
 .DS_Store
-.AppleDouble
-.LSOverride
-
-# Windows
 Thumbs.db
-ehthumbs.db
 Desktop.ini
 
-# Linux
-*~
-
-# Logs
-logs/
+# -----------------------------------------------------------------------------
+# Logs / runtime artifacts
+# -----------------------------------------------------------------------------
 *.log
-
-# Temporary files
+nohup.out
+logs/
 tmp/
 temp/
-.tmp/
 
-# etc
+# -----------------------------------------------------------------------------
+# Generated experiment outputs (keep code only in git)
+# -----------------------------------------------------------------------------
+artifacts/
+outputs/
+results/
+comparison_output/
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.gif
+*.html
+*.pdf
+
+# -----------------------------------------------------------------------------
+# Data/model artifacts
+# -----------------------------------------------------------------------------
+data/
 *.csv
-deprecated/
-main-service/distilBERT/model
+*.tsv
+*.parquet
+*.jsonl
+*.pkl
+*.pickle
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.model
 
+# -----------------------------------------------------------------------------
+# Local project-specific
+# -----------------------------------------------------------------------------
 .claude/
+deprecated/
 testFiles/
-
 core/services/DBert/DistillBERT/
-
-GraphMAE2/
-
 DistillBERT/
 core/DistillBERT/
