@@ -490,13 +490,25 @@ class PlotGenerator:
         for idx, word in enumerate(word_graph.words):
             G.add_node(idx, label=word.content, freq=word.freq, cluster=int(cluster_labels[idx]))
 
-        # 엣지 추가 (co-occurrence weight)
+        # 엣지 추가 (co-occurrence weight) - 최적화: sparse matrix 활용
         edges_with_weights = []
-        for i in range(word_graph.num_nodes):
-            for j in range(i + 1, word_graph.num_nodes):
-                weight = word_graph.edge_matrix[i, j]
-                if weight > 0:
+        edge_matrix = word_graph.edge_matrix
+
+        # sparse matrix인 경우 nonzero() 사용
+        if hasattr(edge_matrix, 'nonzero'):
+            rows, cols = edge_matrix.nonzero()
+            for idx in range(len(rows)):
+                i, j = rows[idx], cols[idx]
+                if i < j:  # 상삼각만
+                    weight = edge_matrix[i, j]
                     edges_with_weights.append((i, j, weight))
+        else:
+            # dense matrix인 경우 기존 방식
+            for i in range(word_graph.num_nodes):
+                for j in range(i + 1, word_graph.num_nodes):
+                    weight = edge_matrix[i, j]
+                    if weight > 0:
+                        edges_with_weights.append((i, j, weight))
 
         # 엣지 가중치로 정렬하여 상위 N개만 표시 (선택사항)
         if max_edges is not None and len(edges_with_weights) > max_edges:
@@ -506,17 +518,8 @@ class PlotGenerator:
         for i, j, weight in edges_with_weights:
             G.add_edge(i, j, weight=weight)
 
-        # 레이아웃 계산 (Kamada-Kawai는 큰 그래프에 더 적합)
-        # 노드가 많으면 spring_layout 대신 다른 알고리즘 사용
-        if len(G.nodes()) > 100:
-            # Kamada-Kawai: 더 균등한 분포
-            try:
-                pos = nx.kamada_kawai_layout(G)
-            except:
-                # 실패하면 spring layout 사용
-                pos = nx.spring_layout(G, k=k*2, iterations=100, seed=random_seed)
-        else:
-            pos = nx.spring_layout(G, k=k, iterations=100, seed=random_seed)
+        # 레이아웃 계산 (Spectral layout - 빠르고 커뮤니티 구조 강조)
+        pos = nx.spectral_layout(G)
 
         # 클러스터별 색상
         unique_clusters = np.unique(cluster_labels)
@@ -549,14 +552,15 @@ class PlotGenerator:
             ax=ax
         )
 
-        # 노드 그리기
+        # 노드 그리기 (동심원 형태)
         nx.draw_networkx_nodes(
             G, pos,
             node_color=node_colors,
             node_size=node_sizes,
+            node_shape='o',  # 원형
             alpha=0.9,  # 노드는 더 불투명하게
-            linewidths=1,  # 테두리 추가
-            edgecolors='white',  # 흰색 테두리로 구분
+            linewidths=2,  # 테두리 두께 증가
+            edgecolors='black',  # 검정 테두리로 동심원 효과
             ax=ax
         )
 
