@@ -40,7 +40,7 @@ def main():
 
     # 설정 생성
     config = GRACEConfig(
-        csv_path='/home/jaehun/lab/SENTIMENT/kaggle_RC_2019-05.csv',
+        csv_path='data/kaggle.csv',
         num_documents=10000,
         top_n_words=1000,
         graphmae_epochs=100,

@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 
 # 프로젝트 루트를 Python path에 추가
-project_root = Path(__file__).parent
+project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 sys.path.insert(0, str(project_root / 'core'))
 
@@ -19,7 +19,7 @@ from core.services.GRACE.GRACEPipeline import GRACEPipeline
 def test_reproducibility():
     """재현성 테스트: 2회 실행 결과 비교"""
 
-    csv_path = '/home/jaehun/lab/SENTIMENT/kaggle_RC_2019-05.csv'
+    csv_path = 'data/kaggle.csv'
 
     # 매우 작은 설정 (빠른 테스트)
     config = GRACEConfig(

@@ -7,6 +7,20 @@ import json
 import pandas as pd
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def get_results_dir() -> Path:
+    candidates = [
+        ROOT / "artifacts" / "runs" / "results" / "rq1_single_vs_multi",
+        ROOT / "results" / "rq1_single_vs_multi",
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    return candidates[0]
+
+
 def load_data(results_dir):
     """결과 디렉토리에서 데이터 로드"""
     with open(results_dir / 'statistical_tests_20251020_174917.json', 'r') as f:
@@ -171,7 +185,7 @@ def create_latex_table(stats, summary_df, output_path):
     print(f"\n✓ LaTeX table saved to: {output_path}")
 
 def main():
-    results_dir = Path('/home/jaehun/lab/SENTIMENT/results/rq1_single_vs_multi')
+    results_dir = get_results_dir()
 
     # 데이터 로드
     stats, summary_df = load_data(results_dir)

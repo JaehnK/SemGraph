@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 import pandas as pd
 
+ROOT = Path(__file__).resolve().parents[1]
+
 
 def load_results(json_path: str) -> List[Dict]:
     """Load raw results from JSON file."""
@@ -228,7 +230,11 @@ def create_summary_table(param_name: str, analysis_results: Dict) -> str:
 
 def main():
     """Main analysis function."""
-    results_dir = Path('/home/jaehun/lab/SENTIMENT/results/rq2_ablation')
+    candidates = [
+        ROOT / "artifacts" / "runs" / "results" / "rq2_ablation",
+        ROOT / "results" / "rq2_ablation",
+    ]
+    results_dir = next((p for p in candidates if p.exists()), candidates[0])
 
     # Analyze each parameter
     parameters = [

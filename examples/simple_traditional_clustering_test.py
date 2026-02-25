@@ -23,7 +23,7 @@ def main():
     print("=" * 80)
     
     # 설정
-    csv_path = '/home/jaehun/lab/SENTIMENT/kaggle_RC_2019-05.csv'
+    csv_path = 'data/kaggle.csv'
     num_documents = 10000
     top_n_words = 500
     text_column = 'body'

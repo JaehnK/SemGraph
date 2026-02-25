@@ -1,6 +1,8 @@
 #!/bin/bash
 # RQ1 Complete Ablation Study 실행 스크립트
 
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 echo "================================================================"
 echo "RQ1 Complete Ablation Study"
 echo "================================================================"
@@ -34,13 +36,16 @@ echo "실험 시작..."
 echo ""
 
 # PYTHONPATH 설정
-export PYTHONPATH="/home/jaehun/lab/SENTIMENT:$PYTHONPATH"
+export PYTHONPATH="$ROOT_DIR:$PYTHONPATH"
 
 # Conda 환경 활성화
-source /home/jaehun/anaconda3/bin/activate SENTIMENT
+if command -v conda >/dev/null 2>&1; then
+    eval "$(conda shell.bash hook)"
+    conda activate SENTIMENT
+fi
 
 # 실험 실행
-python experiments/rq1_single_vs_multi_embedding.py
+python "$ROOT_DIR/experiments/rq1_single_vs_multi_embedding.py"
 
 echo ""
 echo "================================================================"

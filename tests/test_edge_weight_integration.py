@@ -20,7 +20,7 @@ def test_edge_weight_in_dgl_graph():
 
     # 1. DocumentService 초기화
     doc_service = DocumentService()
-    doc_service.load_data_from_reddit("/home/jaehun/lab/SENTIMENT/data/reddit_mental_health_cleaned.csv")
+    doc_service.load_data_from_reddit("data/reddit_mental_health_cleaned.csv")
     print(f"✓ 데이터 로드 완료: {len(doc_service.documents)} 문서")
 
     # 2. 전처리
@@ -131,7 +131,7 @@ def test_graphmae_end_to_end():
 
     # 1. 데이터 준비
     doc_service = DocumentService()
-    doc_service.load_data_from_reddit("/home/jaehun/lab/SENTIMENT/data/reddit_mental_health_cleaned.csv")
+    doc_service.load_data_from_reddit("data/reddit_mental_health_cleaned.csv")
     doc_service.preprocess_documents(max_docs=500)
     print(f"✓ 데이터 준비 완료: {len(doc_service._preprocessed_texts)} 문서")
 

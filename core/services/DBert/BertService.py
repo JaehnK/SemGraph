@@ -4,6 +4,7 @@ from typing import List, Dict, Any
 from transformers import DistilBertTokenizer, DistilBertModel
 import sys
 import os
+from pathlib import Path
 
 # 상대 임포트와 절대 임포트 모두 지원
 try:
@@ -19,11 +20,13 @@ class BertService:
     BERT 서비스 - 파이프라인 관리
     """
 
-    def __init__(self, docs: DocumentService, model_path="./DistillBERT/model"):
+    def __init__(self, docs: DocumentService, model_path: str | None = None):
 
         self.docs = docs
-        self.model_path = model_path
-        self.cache_path = model_path  # cache_path 추가
+        root_dir = Path(__file__).resolve().parents[3]
+        default_model_path = root_dir / "DistillBERT" / "model"
+        self.model_path = str(default_model_path if model_path is None else Path(model_path))
+        self.cache_path = self.model_path
         self.model_name = 'distilbert-base-uncased'
 
         self.tokenizer = DistilBertTokenizer.from_pretrained(

@@ -56,7 +56,7 @@ experiments/
 ### 환경 활성화
 ```bash
 conda activate SENTIMENT
-cd /home/jaehun/lab/SENTIMENT
+cd /path/to/SENTIMENT
 ```
 
 ### RQ1 실험 실행

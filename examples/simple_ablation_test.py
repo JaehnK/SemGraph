@@ -25,7 +25,7 @@ def main():
 
     # 1. 설정 생성 (테스트용 작은 크기)
     config = GRACEConfig(
-        csv_path='/home/jaehun/lab/SENTIMENT/kaggle_RC_2019-05.csv',
+        csv_path='data/kaggle.csv',
         num_documents=50,       # 빠른 테스트를 위해 50개만
         top_n_words=30,
         graphmae_epochs=5,      # 5 epoch만

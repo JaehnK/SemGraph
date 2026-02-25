@@ -12,10 +12,24 @@ import seaborn as sns
 from scipy.spatial.distance import pdist, squareform
 from scipy.stats import pearsonr
 
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def get_results_dir() -> Path:
+    candidates = [
+        ROOT / "artifacts" / "runs" / "results" / "rq1_single_vs_multi",
+        ROOT / "results" / "rq1_single_vs_multi",
+    ]
+    for path in candidates:
+        if path.exists():
+            return path
+    return candidates[0]
+
+
 def load_embeddings():
     """저장된 임베딩 로드 (만약 있다면)"""
     # 일단 raw 결과에서 통계만 분석
-    results_dir = Path('/home/jaehun/lab/SENTIMENT/results/rq1_single_vs_multi')
+    results_dir = get_results_dir()
 
     with open(results_dir / 'raw_results_20251020_174917.json', 'r') as f:
         data = json.load(f)
@@ -249,7 +263,7 @@ def main():
     analyze_cluster_count_variation(data)
 
     # 시각화
-    output_dir = Path('/home/jaehun/lab/SENTIMENT/results/rq1_single_vs_multi/analysis')
+    output_dir = get_results_dir() / "analysis"
     create_comparison_plots(data, output_dir)
 
     print("\n" + "="*80)

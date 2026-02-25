@@ -318,8 +318,8 @@ def main():
     parser.add_argument(
         '--csv',
         type=str,
-        default='/home/jaehun/lab/SENTIMENT/kaggle_RC_2019-05.csv',
-        help='CSV 파일 경로 (기본: kaggle_RC_2019-05.csv)'
+        default='data/kaggle.csv',
+        help='CSV 파일 경로 (기본: data/kaggle.csv)'
     )
 
     args = parser.parse_args()

@@ -418,7 +418,7 @@ def run_comparison_experiment(
 
 if __name__ == '__main__':
     # 실험 설정
-    csv_path = '/home/jaehun/lab/SENTIMENT/kaggle_RC_2019-05.csv'
+    csv_path = 'data/kaggle.csv'
     
     # 실험 실행 (매우 작은 설정으로 빠른 테스트)
     evaluation_results, clustering_results = run_comparison_experiment(
