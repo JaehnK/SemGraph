@@ -10,27 +10,25 @@ SemGraph Pipeline
 6. 평가 및 결과 분석
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import pandas as pd
 import torch
 import numpy as np
-from typing import List, Dict, Optional, Tuple, Any
+from typing import List, Dict, Optional, Tuple, Any, TYPE_CHECKING
 from pathlib import Path
 import json
 from datetime import datetime
 
-# 서비스 import
-from ..Document.DocumentService import DocumentService
-from ..Graph.GraphService import GraphService
-from ..Graph.NodeFeatureHandler import NodeFeatureHandler
-from ..GraphMAE import GraphMAEService, GraphMAEConfig
-from entities import Word, WordGraph, NodeFeatureType
-
 from .SemGraphConfig import SemGraphConfig
-from ..clustering import SphericalKMeansClusteringService
-from ..Metric import MetricsService
-from ..Visualization import VisualizationService
+
+if TYPE_CHECKING:
+    from ..Document.DocumentService import DocumentService
+    from ..Graph.GraphService import GraphService
+    from ..Graph.NodeFeatureHandler import NodeFeatureHandler
+    from entities import WordGraph
 
 
 class SemGraphPipeline:
@@ -42,6 +40,8 @@ class SemGraphPipeline:
             config: SemGraph 파이프라인 설정
         """
         self.config = config
+        from ..clustering import SphericalKMeansClusteringService
+        from ..Metric import MetricsService
 
         # 재현성을 위한 랜덤 시드 고정 (전역)
         import random
@@ -138,6 +138,8 @@ class SemGraphPipeline:
 
     def load_and_preprocess(self) -> None:
         """데이터 로딩 및 전처리"""
+        from ..Document.DocumentService import DocumentService
+
         # CSV 로드
         self._log(f"📁 데이터셋 로드: {self.config.csv_path}")
 
@@ -168,6 +170,8 @@ class SemGraphPipeline:
 
     def build_semantic_network(self) -> None:
         """공출현 기반 의미연결망 구축"""
+        from ..Graph.GraphService import GraphService
+
         if self.doc_service is None:
             raise RuntimeError("DocumentService가 초기화되지 않았습니다. load_and_preprocess()를 먼저 호출하세요.")
 
@@ -208,6 +212,9 @@ class SemGraphPipeline:
 
     def compute_node_features(self) -> None:
         """멀티모달 임베딩 계산 (Word2Vec + BERT)"""
+        from ..Graph.NodeFeatureHandler import NodeFeatureHandler
+        from entities import NodeFeatureType
+
         if self.word_graph is None or self.graph_service is None:
             raise RuntimeError("WordGraph가 생성되지 않았습니다. build_semantic_network()를 먼저 호출하세요.")
 
@@ -247,6 +254,8 @@ class SemGraphPipeline:
 
     def train_graphmae(self) -> None:
         """GraphMAE 사전학습 및 임베딩 추출"""
+        from ..GraphMAE import GraphMAEService, GraphMAEConfig
+
         if self.word_graph is None or self.graph_service is None:
             raise RuntimeError("WordGraph가 생성되지 않았습니다.")
 
@@ -521,6 +530,8 @@ class SemGraphPipeline:
 
     def _generate_visualizations(self) -> None:
         """시각화 생성 (t-SNE, Word Cloud, Network Graph)"""
+        from ..Visualization import VisualizationService
+
         self._log("\n  시각화 생성 중...")
 
         output_dir = Path(self.config.output_dir) / "visualizations"
