@@ -1,5 +1,15 @@
-from .GRACEPipeline import GRACEPipeline
 from .GRACEConfig import GRACEConfig
-from .TraditionalGraphClusteringService import TraditionalGraphClusteringService
 
 __all__ = ['GRACEPipeline', 'GRACEConfig', 'TraditionalGraphClusteringService']
+
+
+def __getattr__(name):
+    if name == 'GRACEPipeline':
+        from .GRACEPipeline import GRACEPipeline
+        return GRACEPipeline
+    if name == 'TraditionalGraphClusteringService':
+        from .TraditionalGraphClusteringService import TraditionalGraphClusteringService
+        return TraditionalGraphClusteringService
+    if name == 'GRACEConfig':
+        return GRACEConfig
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
