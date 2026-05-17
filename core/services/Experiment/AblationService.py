@@ -1,7 +1,7 @@
 """
 Ablation Study Service
 
-GRACE 컴포넌트별 기여도 분석
+SemGraph 컴포넌트별 기여도 분석
 - GraphMAE 유/무
 - Multimodal embedding (Word2Vec + BERT) vs 단일 임베딩
 - 하이퍼파라미터 영향 (mask rate, embedding dimension, epochs)
@@ -14,8 +14,8 @@ from pathlib import Path
 from datetime import datetime
 import json
 
-from ..GRACE.GRACEConfig import GRACEConfig
-from ..GRACE.GRACEPipeline import GRACEPipeline
+from ..semgraph.SemGraphConfig import SemGraphConfig
+from ..semgraph.SemGraphPipeline import SemGraphPipeline
 from ..clustering import SphericalKMeansClusteringService
 from ..Metric import MetricsService
 from ..Document.DocumentService import DocumentService
@@ -28,16 +28,16 @@ class AblationService:
     """
     Ablation Study를 위한 서비스 클래스
 
-    GRACE의 각 컴포넌트가 성능에 미치는 영향을 분석:
+    SemGraph의 각 컴포넌트가 성능에 미치는 영향을 분석:
     1. Embedding Method Ablation: Word2Vec only, BERT only, Multimodal
     2. GraphMAE Ablation: GraphMAE 유/무
     3. Hyperparameter Ablation: mask_rate, embed_size, epochs
     """
 
-    def __init__(self, base_config: GRACEConfig, random_state: int = 42):
+    def __init__(self, base_config: SemGraphConfig, random_state: int = 42):
         """
         Args:
-            base_config: 기본 GRACE 설정 (baseline)
+            base_config: 기본 SemGraph 설정 (baseline)
             random_state: 재현성을 위한 랜덤 시드
         """
         self.base_config = base_config
@@ -63,7 +63,7 @@ class AblationService:
         print("📁 공유 데이터 준비 중...")
 
         # DocumentService 초기화
-        pipeline = GRACEPipeline(self.base_config)
+        pipeline = SemGraphPipeline(self.base_config)
         pipeline.load_and_preprocess()
         pipeline.build_semantic_network()
 
@@ -123,7 +123,7 @@ class AblationService:
 
         실험:
         - Without GraphMAE (멀티모달 임베딩만 사용)
-        - With GraphMAE (GRACE 전체 파이프라인)
+        - With GraphMAE (SemGraph 전체 파이프라인)
 
         Returns:
             {graphmae_status: {metric: value}}
@@ -325,7 +325,7 @@ class AblationService:
             전체 ablation 결과
         """
         print("\n" + "=" * 80)
-        print("🚀 GRACE Ablation Study 시작")
+        print("🚀 SemGraph Ablation Study 시작")
         print("=" * 80)
 
         start_time = datetime.now()
@@ -387,7 +387,7 @@ class AblationService:
     # 헬퍼 메서드
     # ============================================================
 
-    def _create_config_variant(self, **kwargs) -> GRACEConfig:
+    def _create_config_variant(self, **kwargs) -> SemGraphConfig:
         """
         base_config를 복사하고 특정 파라미터만 변경한 설정 생성
 
@@ -395,7 +395,7 @@ class AblationService:
             **kwargs: 변경할 파라미터
 
         Returns:
-            변형된 GRACEConfig
+            변형된 SemGraphConfig
         """
         import copy
         config = copy.deepcopy(self.base_config)
@@ -414,7 +414,7 @@ class AblationService:
 
     def _run_experiment(
         self,
-        config: GRACEConfig,
+        config: SemGraphConfig,
         use_graphmae: bool = True
     ) -> Dict[str, float]:
         """

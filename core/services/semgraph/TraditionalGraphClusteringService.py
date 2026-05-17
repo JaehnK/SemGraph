@@ -6,7 +6,7 @@
 - Leiden: Louvain 개선판 (더 정확한 커뮤니티 탐지)
 - Girvan-Newman: Edge betweenness 기반
 
-GRACE와 동일한 WordGraph를 공유하여 공정한 비교를 보장합니다.
+SemGraph와 동일한 WordGraph를 공유하여 공정한 비교를 보장합니다.
 """
 
 import numpy as np
@@ -21,8 +21,8 @@ from entities import WordGraph
 class TraditionalGraphClusteringService:
     """전통적 그래프 클러스터링 서비스
     
-    GRACE와 동일한 WordGraph를 사용하여 전통적인 그래프 커뮤니티 탐지 알고리즘 수행.
-    GraphMAE 없이 그래프 구조만으로 클러스터링하여 GRACE의 차별점을 입증.
+    SemGraph와 동일한 WordGraph를 사용하여 전통적인 그래프 커뮤니티 탐지 알고리즘 수행.
+    GraphMAE 없이 그래프 구조만으로 클러스터링하여 SemGraph의 차별점을 입증.
     """
     
     def __init__(self, random_state: int = 42):
@@ -57,7 +57,7 @@ class TraditionalGraphClusteringService:
         - 단점: 로컬 옵티멈에 빠질 수 있음
         
         Args:
-            word_graph: GRACE와 동일한 WordGraph 객체
+            word_graph: SemGraph와 동일한 WordGraph 객체
             resolution: Modularity 해상도 (높을수록 작은 커뮤니티 생성)
             
         Returns:
@@ -126,7 +126,7 @@ class TraditionalGraphClusteringService:
         - 단점: 약간 느림
         
         Args:
-            word_graph: GRACE와 동일한 WordGraph 객체
+            word_graph: SemGraph와 동일한 WordGraph 객체
             resolution: Modularity 해상도
             n_iterations: 최대 반복 횟수 (-1은 수렴까지)
             
@@ -210,7 +210,7 @@ class TraditionalGraphClusteringService:
         - 알고리즘 자체가 순차적이어서 단계 간 병렬화 불가능
         
         Args:
-            word_graph: GRACE와 동일한 WordGraph 객체
+            word_graph: SemGraph와 동일한 WordGraph 객체
             num_clusters: 원하는 클러스터 수 (None이면 modularity 최대화, 느림!)
             verbose: 진행상황 출력 여부
             

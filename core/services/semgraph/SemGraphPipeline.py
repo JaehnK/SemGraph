@@ -539,7 +539,7 @@ class SemGraphPipeline:
                 labels=labels,
                 method='tsne',
                 filename=f'tsne_{timestamp}.png',
-                title='GRACE Embeddings (t-SNE)'
+                title='SemGraph Embeddings (t-SNE)'
             )
             self._log(f"    ✓ t-SNE: {tsne_path.name}")
         except Exception as e:
