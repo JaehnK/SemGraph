@@ -1,7 +1,6 @@
 from typing import Optional, List, Dict, Tuple, Any, Union
 import numpy as np
 import torch
-from torch_geometric.data import Data
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -297,12 +296,14 @@ class WordGraph:
         self._edge_feature_type = feature_type
         self._update_metadata()
     
-    def to_pytorch_geometric(self) -> Data:
+    def to_pytorch_geometric(self) -> 'Data':
         """PyTorch Geometric Data 객체로 변환"""
         if self._node_features is None:
             raise ValueError("Node features not set")
         if self._edge_index is None:
             raise ValueError("Edges not set")
+
+        from torch_geometric.data import Data
         
         return Data(
             x=self._node_features,
