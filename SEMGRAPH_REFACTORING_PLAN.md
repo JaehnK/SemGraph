@@ -116,6 +116,92 @@
 
 - `refactor/bert-only-node-features`
 
+Phase 3 실행 체크리스트:
+
+1. Config를 BERT-only 의미로 좁힌다.
+   - 수정 파일:
+     - `core/services/semgraph/SemGraphConfig.py`
+     - compatibility가 필요하면 `core/services/GRACE/*Config*`
+     - `pipelines/main.py`
+     - 관련 config 생성 테스트
+   - 커밋 시점:
+     - config 생성과 validation이 BERT-only 기준으로 통과할 때 커밋한다.
+   - 커밋 메시지:
+     - `refactor: simplify config to bert node embeddings`
+   - 커밋 전 검증:
+     - `python -m py_compile core/services/semgraph/SemGraphConfig.py`
+     - `python -c "from core.services.semgraph.SemGraphConfig import SemGraphConfig; print(SemGraphConfig.__name__)"`
+   - 하지 않을 일:
+     - `NodeFeatureHandler` 내부 분기 제거를 이 커밋에 섞지 않는다.
+     - Word2Vec 파일을 삭제하지 않는다.
+
+2. `NodeFeatureHandler`를 BERT-only provider로 축소한다.
+   - 수정 파일:
+     - `core/services/Graph/NodeFeatureHandler.py`
+     - 필요 시 class docstring과 method 이름
+   - 커밋 시점:
+     - `calculate_embeddings()`가 method 인자 없이 BERT feature tensor를 만들 수 있을 때 커밋한다.
+   - 커밋 메시지:
+     - `refactor: remove node embedding method branching`
+   - 커밋 전 검증:
+     - `python -m py_compile core/services/Graph/NodeFeatureHandler.py`
+     - `rg "Word2Vec|w2v|fusion_type|_get_concat|_get_attention" core/services/Graph/NodeFeatureHandler.py`
+   - 하지 않을 일:
+     - `core/services/Word2Vec/*`를 이동하거나 삭제하지 않는다.
+     - `AttentionFusion.py`를 이동하거나 삭제하지 않는다.
+
+3. Pipeline node feature 단계를 BERT-only 흐름으로 정리한다.
+   - 수정 파일:
+     - `core/services/semgraph/SemGraphPipeline.py`
+     - compatibility wrapper가 있다면 `core/services/GRACE/*Pipeline*`
+     - `pipelines/main.py`
+   - 커밋 시점:
+     - pipeline의 node feature log, 결과 config, 저장 metadata가 BERT-only 기준으로 정리됐을 때 커밋한다.
+   - 커밋 메시지:
+     - `refactor: simplify pipeline node feature step`
+   - 커밋 전 검증:
+     - `python -m py_compile core/services/semgraph/SemGraphPipeline.py pipelines/main.py`
+     - 가능한 환경이면 `python pipelines/main.py --help`
+   - 하지 않을 일:
+     - GraphMAE 학습, clustering, metric 동작을 바꾸지 않는다.
+     - output artifact schema를 불필요하게 바꾸지 않는다.
+
+4. Ablation과 활성 테스트를 BERT-only 기준으로 갱신한다.
+   - 수정 파일:
+     - `core/services/Experiment/AblationService.py`
+     - `pipelines/ablation_main.py`
+     - `tests/*` 중 활성 SemGraph/config/ablation 테스트
+   - 커밋 시점:
+     - 제거된 `w2v`, `concat`, `attention` 선택지를 기대하는 테스트가 BERT-only 기대값으로 바뀌었을 때 커밋한다.
+   - 커밋 메시지:
+     - `test: update expectations for bert-only features`
+   - 커밋 전 검증:
+     - `python -m py_compile core/services/Experiment/AblationService.py pipelines/ablation_main.py`
+     - 가능한 환경이면 `pytest tests/services/Experiment/test_ablation_service.py`
+   - 하지 않을 일:
+     - research 실험 재배치를 이 커밋에 섞지 않는다.
+
+5. BERT-only smoke test를 추가한다.
+   - 수정 파일:
+     - `tests/*` 또는 `tests/services/Graph/*`
+   - 커밋 시점:
+     - main path에서 Word2Vec provider가 생성되지 않는다는 회귀 테스트가 통과할 때 커밋한다.
+   - 커밋 메시지:
+     - `test: cover bert-only node feature path`
+   - 커밋 전 검증:
+     - 새 smoke test 단독 실행
+     - `rg "Word2Vec|w2v|concat|attention|fusion" core/services pipelines tests`
+   - 하지 않을 일:
+     - legacy 파일 삭제를 테스트 커밋에 섞지 않는다.
+
+Phase 3 완료 조건:
+
+- main path에서 `Word2VecService`가 생성되지 않는다.
+- `NodeFeatureHandler`가 BERT feature 생성과 dimension adjustment만 담당한다.
+- config와 pipeline에서 `w2v`, `concat`, `attention`, `fusion_type` 선택지가 사라지거나 legacy-only로 남는다.
+- Word2Vec/AttentionFusion 파일은 아직 삭제하지 않고 Phase 6 대상으로 남긴다.
+- 합의된 smoke test와 py_compile 검증이 통과한다.
+
 ### Phase 4. Ports And Adapters
 
 목표:
@@ -221,6 +307,8 @@
 - import가 깨진 중간 상태는 커밋하지 않는다.
 - 기존 dirty state나 nested repo 변경은 해당 작업과 직접 관련이 없으면 포함하지 않는다.
 - 삭제는 main path 참조가 끊긴 뒤 별도 커밋으로 처리한다.
+- 커밋은 "수정 파일 범위가 설명 가능하고, 해당 범위의 검증 명령이 통과한 시점"에 만든다.
+- 커밋 전에는 `git diff --stat`과 staged diff를 확인한다.
 
 ## 6. 현재 주의 사항
 
