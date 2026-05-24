@@ -17,7 +17,7 @@ class DocumentService:
     
     def __init__(self, model_name='en_core_web_sm', disable_components=None):
         # 데이터 레이어
-        self._documents = Documents()
+        self._documents = Corpus()
         
         # 서비스 레이어들
         self._preprocessing = TextPreprocessingService(model_name, disable_components)
