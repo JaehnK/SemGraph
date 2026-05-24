@@ -2,7 +2,6 @@ import sys
 from typing import List, Optional, Dict
 import threading
 
-import spacy
 import numpy as np
 
 from entities import *
