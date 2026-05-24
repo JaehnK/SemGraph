@@ -58,9 +58,16 @@ class WordGraph:
                 word_to_node_id: 단어 → 노드 ID 매핑 (None이면 자동 생성)
         """
         # 기본 데이터
-        self._words = words
-        self._word_to_node_id = word_to_node_id or {word.content: i for i, word in enumerate(words)}
-        self._node_id_to_word = {i: word for word, i in self._word_to_node_id.items()}
+        self._words = list(words)
+        self._validate_words(self._words)
+        self._word_to_node_id = dict(word_to_node_id) if word_to_node_id else {
+            word.content: i for i, word in enumerate(self._words)
+        }
+        self._validate_node_mapping()
+        self._node_id_to_word = {
+            node_id: self._words[node_id]
+            for node_id in range(len(self._words))
+        }
         
         # 그래프 구조
         self._edge_index: Optional[torch.Tensor] = None  # [2, num_edges]
@@ -163,8 +170,7 @@ class WordGraph:
         Args:
             bert_embeddings: [num_nodes, 768] 형태의 BERT 임베딩
         """
-        if isinstance(bert_embeddings, np.ndarray):
-            bert_embeddings = torch.tensor(bert_embeddings, dtype=torch.float32)
+        bert_embeddings = self._coerce_feature_tensor(bert_embeddings)
         
         if bert_embeddings.shape[0] != self.num_nodes:
             raise ValueError(f"BERT embeddings size mismatch: expected {self.num_nodes}, got {bert_embeddings.shape[0]}")
@@ -186,8 +192,7 @@ class WordGraph:
             features: [num_nodes, feature_dim] 형태의 특성
             feature_type: 특성 타입
         """
-        if isinstance(features, np.ndarray):
-            features = torch.tensor(features, dtype=torch.float32)
+        features = self._coerce_feature_tensor(features)
         
         if features.shape[0] != self.num_nodes:
             raise ValueError(f"Feature size mismatch: expected {self.num_nodes}, got {features.shape[0]}")
@@ -208,6 +213,7 @@ class WordGraph:
         """
         if len(edge_list) != len(co_occurrence_weights):
             raise ValueError("Edge list and weights must have same length")
+        self._validate_edge_list(edge_list)
 
         # 빈 엣지 리스트 처리
         if len(edge_list) == 0:
@@ -238,6 +244,14 @@ class WordGraph:
         """
         if not (len(edge_list) == len(co_occurrence_weights) == len(similarity_scores)):
             raise ValueError("Edge list, co-occurrence weights, and similarity scores must have same length")
+        self._validate_edge_list(edge_list)
+
+        if len(edge_list) == 0:
+            self._edge_index = torch.empty((2, 0), dtype=torch.long)
+            self._edge_attr = torch.empty((0, 2), dtype=torch.float32)
+            self._edge_feature_type = EdgeFeatureType.COMBINED
+            self._update_metadata()
+            return
         
         # PyTorch Geometric 형태로 변환
         edge_index = torch.tensor(edge_list, dtype=torch.long).t().contiguous()  # [2, num_edges]
@@ -276,8 +290,10 @@ class WordGraph:
         if edge_index.shape[1] != edge_attr.shape[0]:
             raise ValueError("Number of edges in edge_index and edge_attr must match")
         
-        self._edge_index = edge_index
-        self._edge_attr = edge_attr
+        self._validate_edge_list([tuple(edge) for edge in edge_index.t().tolist()])
+
+        self._edge_index = edge_index.clone().detach()
+        self._edge_attr = edge_attr.clone().detach()
         self._edge_feature_type = feature_type
         self._update_metadata()
     
@@ -526,7 +542,9 @@ class WordGraph:
     def _update_metadata(self) -> None:
         """메타데이터 업데이트"""
         node_feature_dim = self._node_features.shape[1] if self._node_features is not None else 0
-        edge_feature_dim = self._edge_attr.shape[1] if self._edge_attr is not None else 0
+        edge_feature_dim = 0
+        if self._edge_attr is not None:
+            edge_feature_dim = 1 if self._edge_attr.dim() == 1 else self._edge_attr.shape[1]
         
         self._metadata = GraphMetadata(
             num_nodes=self.num_nodes,
@@ -536,6 +554,43 @@ class WordGraph:
             node_feature_type=self._node_feature_type,
             edge_feature_type=self._edge_feature_type
         )
+
+    def _validate_words(self, words: List[Word]) -> None:
+        if not words:
+            raise ValueError("WordGraph requires at least one word")
+
+        contents = [word.content for word in words]
+        if len(contents) != len(set(contents)):
+            raise ValueError("WordGraph words must have unique content")
+
+    def _validate_node_mapping(self) -> None:
+        expected_contents = {word.content for word in self._words}
+        if set(self._word_to_node_id.keys()) != expected_contents:
+            raise ValueError("word_to_node_id must contain exactly the graph words")
+
+        expected_ids = set(range(len(self._words)))
+        if set(self._word_to_node_id.values()) != expected_ids:
+            raise ValueError("word_to_node_id values must be contiguous node ids")
+
+        for index, word in enumerate(self._words):
+            if self._word_to_node_id[word.content] != index:
+                raise ValueError("word_to_node_id must match the order of words")
+
+    def _validate_edge_list(self, edge_list: List[Tuple[int, int]]) -> None:
+        for src, dst in edge_list:
+            if src < 0 or dst < 0 or src >= self.num_nodes or dst >= self.num_nodes:
+                raise ValueError(f"Edge ({src}, {dst}) references an unknown node")
+
+    def _coerce_feature_tensor(self, features: Union[torch.Tensor, np.ndarray]) -> torch.Tensor:
+        if isinstance(features, np.ndarray):
+            features = torch.tensor(features, dtype=torch.float32)
+        else:
+            features = features.clone().detach()
+
+        if features.dim() != 2:
+            raise ValueError("Node features must have shape [num_nodes, feature_dim]")
+
+        return features.to(dtype=torch.float32)
     
     def __str__(self) -> str:
         return (f"WordGraph(nodes={self.num_nodes}, edges={self.num_edges}, "
