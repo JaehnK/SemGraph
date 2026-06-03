@@ -5,8 +5,6 @@ Ablation Study Main Script for SemGraph
 체계적인 ablation study를 수행하여 각 하이퍼파라미터의 영향을 분석합니다.
 
 Ablation Parameters:
-- Embedding Input Method: w2v_only, bert_only, concat
-- Input Size (concat only): 64, 128, 256
 - Output Size: 64, 128, 256
 - Mask Rate: 0.3, 0.5, 0.75, 0.9
 - Epoch: 100, 250, 500, 1000
@@ -15,7 +13,6 @@ Ablation Parameters:
 
 Usage:
     python pipelines/ablation_main.py --all                    # 모든 ablation 실행
-    python pipelines/ablation_main.py --embedding              # Embedding method ablation만
     python pipelines/ablation_main.py --mask-rate              # Mask rate ablation만
     python pipelines/ablation_main.py --epochs                 # Epochs ablation만
     python pipelines/ablation_main.py --output-size            # Output size ablation만
@@ -79,10 +76,7 @@ def create_base_config() -> SemGraphConfig:
         edge_weight_threshold=0.0,
 
         # 임베딩
-        embedding_method='concat',  # embedding ablation에서 변경
         embed_size=128,  # output_size ablation에서 변경
-        w2v_dim=64,
-        bert_dim=64,
 
         # GraphMAE
         graphmae_epochs=100,  # epochs ablation에서 변경
@@ -151,63 +145,6 @@ def run_single_experiment(
         return {}, 0
 
 
-def ablation_embedding_method(
-    base_config: SemGraphConfig,
-    output_dir: Path,
-    verbose: bool = False
-) -> Dict[str, Any]:
-    """Embedding Input Method Ablation"""
-
-    print(f"\n{Fore.MAGENTA}{'=' * 80}")
-    print(f"{Fore.GREEN}Ablation 1: Embedding Input Method")
-    print(f"{Fore.MAGENTA}{'=' * 80}{Style.RESET_ALL}\n")
-
-    methods = ['w2v', 'bert', 'concat']
-    # concat일 때만 input_size를 변경
-    input_sizes_for_concat = [64, 128, 256]
-
-    results = {}
-
-    for method in methods:
-        if method == 'concat':
-            # concat일 때는 input_size도 ablation
-            for input_size in input_sizes_for_concat:
-                config = deepcopy(base_config)
-                config.embedding_method = method
-                config.w2v_dim = input_size // 2
-                config.bert_dim = input_size // 2
-                config.embed_size = input_size  # w2v_dim + bert_dim
-                config.output_dir = str(output_dir / f"embedding_{method}_input{input_size}")
-
-                exp_name = f"Embedding={method}, InputSize={input_size}"
-                metrics, n_clusters = run_single_experiment(config, exp_name, verbose)
-
-                results[f"{method}_input{input_size}"] = {
-                    'method': method,
-                    'input_size': input_size,
-                    'n_clusters': n_clusters,
-                    'metrics': metrics
-                }
-        else:
-            # w2v, bert는 고정 크기
-            config = deepcopy(base_config)
-            config.embedding_method = method
-            config.embed_size = 128
-            config.output_dir = str(output_dir / f"embedding_{method}")
-
-            exp_name = f"Embedding={method}"
-            metrics, n_clusters = run_single_experiment(config, exp_name, verbose)
-
-            results[method] = {
-                'method': method,
-                'input_size': 128,
-                'n_clusters': n_clusters,
-                'metrics': metrics
-            }
-
-    return results
-
-
 def ablation_output_size(
     base_config: SemGraphConfig,
     output_dir: Path,
@@ -224,9 +161,6 @@ def ablation_output_size(
 
     for output_size in output_sizes:
         config = deepcopy(base_config)
-        # concat 모드에서 출력 크기 조정
-        config.w2v_dim = output_size // 2
-        config.bert_dim = output_size // 2
         config.embed_size = output_size
         config.output_dir = str(output_dir / f"output_size_{output_size}")
 
@@ -428,12 +362,6 @@ def run_full_ablation_study(
 
     all_results = {}
 
-    if 'embedding' in selected_ablations or 'all' in selected_ablations:
-        results_embedding = ablation_embedding_method(base_config, output_dir / "embedding", verbose)
-        all_results['embedding_method'] = results_embedding
-        save_ablation_results(results_embedding, "embedding_method", output_dir)
-        print_ablation_summary(results_embedding, "Embedding Input Method")
-
     if 'output-size' in selected_ablations or 'all' in selected_ablations:
         results_output = ablation_output_size(base_config, output_dir / "output_size", verbose)
         all_results['output_size'] = results_output
@@ -490,19 +418,18 @@ Examples:
   python pipelines/ablation_main.py --all
 
   # 특정 ablation만 실행
-  python pipelines/ablation_main.py --embedding --mask-rate
+  python pipelines/ablation_main.py --output-size --mask-rate
 
   # Verbose 모드
   python pipelines/ablation_main.py --all --verbose
 
   # 작은 데이터셋으로 테스트
-  python pipelines/ablation_main.py --embedding --max-docs 1000
+  python pipelines/ablation_main.py --output-size --max-docs 1000
         """
     )
 
     # Ablation 선택
     parser.add_argument('--all', action='store_true', help='모든 ablation 실행')
-    parser.add_argument('--embedding', action='store_true', help='Embedding method ablation')
     parser.add_argument('--output-size', action='store_true', help='Output size ablation')
     parser.add_argument('--mask-rate', action='store_true', help='Mask rate ablation')
     parser.add_argument('--epochs', action='store_true', help='Training epochs ablation')
@@ -533,8 +460,6 @@ Examples:
     if args.all:
         selected_ablations = ['all']
     else:
-        if args.embedding:
-            selected_ablations.append('embedding')
         if args.output_size:
             selected_ablations.append('output-size')
         if args.mask_rate:

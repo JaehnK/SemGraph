@@ -3,7 +3,7 @@ Ablation Study Service
 
 SemGraph 컴포넌트별 기여도 분석
 - GraphMAE 유/무
-- Multimodal embedding (Word2Vec + BERT) vs 단일 임베딩
+- BERT node feature baseline
 - 하이퍼파라미터 영향 (mask rate, embedding dimension, epochs)
 """
 
@@ -29,7 +29,7 @@ class AblationService:
     Ablation Study를 위한 서비스 클래스
 
     SemGraph의 각 컴포넌트가 성능에 미치는 영향을 분석:
-    1. Embedding Method Ablation: Word2Vec only, BERT only, Multimodal
+    1. BERT Node Feature Baseline
     2. GraphMAE Ablation: GraphMAE 유/무
     3. Hyperparameter Ablation: mask_rate, embed_size, epochs
     """
@@ -74,41 +74,29 @@ class AblationService:
         print(f"  ✅ 그래프: {self.word_graph.num_nodes} nodes, {self.word_graph.num_edges} edges")
 
     # ============================================================
-    # 2. Embedding Method Ablation
+    # 2. BERT Node Feature Baseline
     # ============================================================
 
     def run_embedding_ablation(self) -> Dict[str, Dict[str, float]]:
         """
-        임베딩 방법별 성능 비교
-
-        실험:
-        - Word2Vec only
-        - BERT only
-        - Multimodal (Word2Vec + BERT)
+        BERT-only 노드 특성 경로의 기준 성능 측정
 
         Returns:
-            {embedding_method: {metric: value}}
+            {'bert': {metric: value}}
         """
         if self.doc_service is None or self.word_graph is None:
             raise RuntimeError("prepare_shared_data()를 먼저 호출하세요.")
 
         print("\n" + "=" * 80)
-        print("🔬 Ablation Study 1: Embedding Method")
+        print("🔬 Ablation Study 1: BERT Node Features")
         print("=" * 80)
 
         results = {}
-        embedding_methods = [
-            ('w2v', "Word2Vec only"),
-            ('bert', "BERT only"),
-            ('concat', "Multimodal (Word2Vec + BERT)")
-        ]
-
-        for method, desc in embedding_methods:
-            print(f"\n[{desc}]")
-            config = self._create_config_variant(embedding_method=method)
-            metrics = self._run_experiment(config, use_graphmae=True)
-            results[method] = metrics
-            self._print_metrics(metrics)
+        print("\n[BERT only]")
+        config = self._create_config_variant()
+        metrics = self._run_experiment(config, use_graphmae=True)
+        results['bert'] = metrics
+        self._print_metrics(metrics)
 
         self.ablation_results['embedding_method'] = results
         return results
@@ -122,7 +110,7 @@ class AblationService:
         GraphMAE 유/무에 따른 성능 비교
 
         실험:
-        - Without GraphMAE (멀티모달 임베딩만 사용)
+        - Without GraphMAE (BERT 노드 특성만 사용)
         - With GraphMAE (SemGraph 전체 파이프라인)
 
         Returns:
@@ -252,11 +240,7 @@ class AblationService:
 
         for embed_size in embed_sizes:
             print(f"\n[Embed Size = {embed_size}]")
-            config = self._create_config_variant(
-                embed_size=embed_size,
-                w2v_dim=embed_size // 2,
-                bert_dim=embed_size // 2
-            )
+            config = self._create_config_variant(embed_size=embed_size)
             metrics = self._run_experiment(config, use_graphmae=True)
             results[embed_size] = metrics
             self._print_metrics(metrics)
@@ -401,8 +385,10 @@ class AblationService:
         config = copy.deepcopy(self.base_config)
 
         for key, value in kwargs.items():
-            if hasattr(config, key):
+            if key in config.__dataclass_fields__:
                 setattr(config, key, value)
+
+        config.validate()
 
         # 결과 저장 비활성화 (ablation 결과만 저장)
         config.save_results = False
@@ -439,7 +425,6 @@ class AblationService:
         node_feature_handler = NodeFeatureHandler(self.doc_service, random_seed=self.random_state)
         node_features = node_feature_handler.calculate_embeddings(
             self.word_graph.words,
-            method=config.embedding_method,
             embed_size=config.embed_size
         )
 
@@ -492,7 +477,7 @@ class AblationService:
                 embeddings = mae_service.model.embed(dgl_graph, dgl_graph.ndata['feat'])
             embeddings = embeddings.cpu()
         else:
-            # GraphMAE 없이 멀티모달 임베딩만 사용
+            # GraphMAE 없이 BERT 노드 특성만 사용
             embeddings = node_features
 
         # 클러스터링 (Spherical K-means - 코사인 거리 기반)
