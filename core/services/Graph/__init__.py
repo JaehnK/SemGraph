@@ -1,13 +1,3 @@
-from .GraphService import GraphService
-from .NodeFeatureHandler import NodeFeatureHandler
-from .AttentionFusion import (
-    CrossAttentionFusion,
-    BiDirectionalFusion,
-    LearnedWeightedFusion,
-    GatedFusion,
-    AttentionFusionFactory
-)
-
 __all__ = [
     'GraphService',
     'NodeFeatureHandler',
@@ -17,3 +7,22 @@ __all__ = [
     'GatedFusion',
     'AttentionFusionFactory'
 ]
+
+
+def __getattr__(name):
+    if name == 'GraphService':
+        from .GraphService import GraphService
+        return GraphService
+    if name == 'NodeFeatureHandler':
+        from .NodeFeatureHandler import NodeFeatureHandler
+        return NodeFeatureHandler
+    if name in (
+        'CrossAttentionFusion',
+        'BiDirectionalFusion',
+        'LearnedWeightedFusion',
+        'GatedFusion',
+        'AttentionFusionFactory',
+    ):
+        from . import AttentionFusion
+        return getattr(AttentionFusion, name)
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
