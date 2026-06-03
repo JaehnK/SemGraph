@@ -107,18 +107,3 @@ class SemGraphConfig:
     def __post_init__(self):
         """초기화 후 검증"""
         self.validate()
-
-    @property
-    def w2v_dim(self) -> None:
-        """Deprecated compatibility shim. Word2Vec is not part of the main path."""
-        return None
-
-    @property
-    def bert_dim(self) -> int:
-        """Compatibility shim for old callers that read bert_dim."""
-        return self.embed_size
-
-    @property
-    def fusion_type(self) -> None:
-        """Deprecated compatibility shim. Attention fusion is not part of the main path."""
-        return None
