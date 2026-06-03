@@ -19,7 +19,6 @@ import torch
 import numpy as np
 from typing import List, Dict, Optional, Tuple, Any, TYPE_CHECKING
 from pathlib import Path
-import json
 from datetime import datetime
 
 from .SemGraphConfig import SemGraphConfig
@@ -495,9 +494,10 @@ class SemGraphPipeline:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
         # JSON 결과 저장
-        json_path = output_dir / f"semgraph_results_{timestamp}.json"
-        with open(json_path, 'w', encoding='utf-8') as f:
-            json.dump(results, f, indent=2, ensure_ascii=False)
+        from ..adapters import JsonArtifactWriter
+
+        writer = JsonArtifactWriter(str(output_dir))
+        json_path = writer.write_json(f"semgraph_results_{timestamp}.json", results)
         self._log(f"  결과 저장: {json_path}")
 
         # 임베딩 저장
