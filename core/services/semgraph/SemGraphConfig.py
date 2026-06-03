@@ -23,13 +23,8 @@ class SemGraphConfig:
     edge_weight_threshold: float = 0.0  # 이 값 이상의 weight를 가진 엣지만 유지
 
     # === 임베딩 설정 ===
-    embedding_method: Literal['concat', 'w2v', 'bert', 'attention'] = 'concat'
-    embed_size: int = 64  # concat일 경우 w2v_dim + bert_dim, attention일 경우 최종 출력 차원
-    w2v_dim: int = 32
-    bert_dim: int = 32
-
-    # === Attention Fusion 설정 (embedding_method='attention'일 때만 사용) ===
-    fusion_type: Literal['cross', 'bidirectional', 'weighted', 'gated'] = 'gated'
+    embedding_method: Literal['bert'] = 'bert'
+    embed_size: int = 64  # BERT 임베딩 후처리 target dimension
 
     # === GraphMAE 설정 ===
     graphmae_epochs: int = 100
@@ -83,8 +78,6 @@ class SemGraphConfig:
             top_n_words=100,
             graphmae_epochs=10,
             embed_size=32,
-            w2v_dim=16,
-            bert_dim=16,
             save_results=False,
             save_graph_viz=False,
             save_embeddings=False
@@ -92,16 +85,11 @@ class SemGraphConfig:
 
     def validate(self) -> None:
         """설정값 검증"""
-        if self.embedding_method == 'concat':
-            if self.embed_size != self.w2v_dim + self.bert_dim:
-                raise ValueError(
-                    f"concat 모드에서 embed_size({self.embed_size})는 "
-                    f"w2v_dim({self.w2v_dim}) + bert_dim({self.bert_dim})와 같아야 합니다."
-                )
-        elif self.embedding_method == 'attention':
-            # attention의 경우 embed_size가 최종 출력 차원
-            # w2v_dim과 bert_dim은 각 임베딩의 중간 차원으로 사용 가능
-            pass  # 특별한 제약 없음
+        if self.embedding_method != 'bert':
+            raise ValueError("SemGraph node embeddings are BERT-only. Use embedding_method='bert'.")
+
+        if self.embed_size <= 0:
+            raise ValueError("embed_size must be a positive integer")
 
         if self.num_clusters is not None:
             if not (self.min_clusters <= self.num_clusters <= self.max_clusters):
@@ -119,3 +107,18 @@ class SemGraphConfig:
     def __post_init__(self):
         """초기화 후 검증"""
         self.validate()
+
+    @property
+    def w2v_dim(self) -> None:
+        """Deprecated compatibility shim. Word2Vec is not part of the main path."""
+        return None
+
+    @property
+    def bert_dim(self) -> int:
+        """Compatibility shim for old callers that read bert_dim."""
+        return self.embed_size
+
+    @property
+    def fusion_type(self) -> None:
+        """Deprecated compatibility shim. Attention fusion is not part of the main path."""
+        return None
