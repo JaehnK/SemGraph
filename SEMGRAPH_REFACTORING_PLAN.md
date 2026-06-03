@@ -226,6 +226,77 @@ Phase 3 완료 조건:
 - domain/entity import가 spaCy, DGL, transformers, matplotlib 없이 가능하다.
 - GraphMAE 학습과 clustering smoke test가 기존 결과 구조를 유지한다.
 
+권장 브랜치:
+
+- `refactor/phase-4-ports-adapters`
+
+Phase 4 실행 체크리스트:
+
+1. Application port 계약을 먼저 정의한다.
+   - 수정 파일:
+     - `core/services/ports/*`
+     - port import smoke test
+   - 커밋 시점:
+     - port 모듈이 spaCy, transformers, DGL, matplotlib 없이 import될 때 커밋한다.
+   - 커밋 메시지:
+     - `refactor: define application service ports`
+   - 하지 않을 일:
+     - 기존 service 구현을 이 커밋에서 이동하지 않는다.
+
+2. Artifact 저장을 `ArtifactWriter` adapter로 분리한다.
+   - 수정 파일:
+     - `core/services/adapters/*`
+     - `core/services/semgraph/SemGraphPipeline.py`
+     - 저장 관련 smoke test
+   - 커밋 시점:
+     - 결과 JSON 저장 경로와 schema가 유지될 때 커밋한다.
+   - 커밋 메시지:
+     - `refactor: route semgraph artifacts through writer adapter`
+   - 하지 않을 일:
+     - visualization 저장까지 함께 옮기지 않는다.
+
+3. BERT node feature provider를 `EmbeddingProvider` adapter 경계로 감싼다.
+   - 수정 파일:
+     - `core/services/Graph/NodeFeatureHandler.py`
+     - `core/services/DBert/*` 또는 adapter wrapper
+   - 커밋 시점:
+     - `NodeFeatureHandler`가 concrete `BertService` 생성 책임을 직접 갖지 않을 때 커밋한다.
+   - 커밋 메시지:
+     - `refactor: inject bert embedding provider`
+   - 하지 않을 일:
+     - BERT embedding 계산 결과 의미를 바꾸지 않는다.
+
+4. GraphMAE/DGL 변환을 representation adapter 경계로 분리한다.
+   - 수정 파일:
+     - `core/services/GraphMAE/*`
+     - `core/services/Graph/GraphService.py`
+     - adapter smoke test
+   - 커밋 시점:
+     - GraphMAE 학습 호출 결과 구조가 유지되고, main pipeline import 시 GraphMAE2가 불필요하게 로드되지 않을 때 커밋한다.
+   - 커밋 메시지:
+     - `refactor: isolate graphmae representation adapter`
+   - 하지 않을 일:
+     - GraphMAE2 fork 내부 파일은 건드리지 않는다.
+
+5. spaCy text preprocessing을 text preprocessor adapter 경계로 분리한다.
+   - 수정 파일:
+     - `core/services/Document/*`
+     - adapter wrapper 또는 factory
+     - import smoke test
+   - 커밋 시점:
+     - domain/entity import와 lightweight service import가 spaCy 없이 가능할 때 커밋한다.
+   - 커밋 메시지:
+     - `refactor: isolate spacy text preprocessing adapter`
+   - 하지 않을 일:
+     - sentence/domain entity 책임을 다시 늘리지 않는다.
+
+Phase 4 완료 조건:
+
+- application-facing ports가 존재하고 heavy implementation import와 분리된다.
+- main pipeline의 artifact 저장은 writer adapter를 통해 수행된다.
+- BERT, spaCy, GraphMAE2/DGL, matplotlib 의존성은 호출 시점 adapter 뒤로 이동한다.
+- `core/GraphMAE2` nested repo는 이번 Phase에서도 직접 수정하지 않는다.
+
 ### Phase 5. Application Pipeline Simplification
 
 목표:
