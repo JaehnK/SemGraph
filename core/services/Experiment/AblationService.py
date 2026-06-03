@@ -9,7 +9,7 @@ SemGraph 컴포넌트별 기여도 분석
 
 import numpy as np
 import torch
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any, TYPE_CHECKING
 from pathlib import Path
 from datetime import datetime
 import json
@@ -18,10 +18,11 @@ from ..semgraph.SemGraphConfig import SemGraphConfig
 from ..semgraph.SemGraphPipeline import SemGraphPipeline
 from ..clustering import SphericalKMeansClusteringService
 from ..Metric import MetricsService
-from ..Document.DocumentService import DocumentService
-from ..Graph.GraphService import GraphService
-from ..Graph.NodeFeatureHandler import NodeFeatureHandler
-from entities import WordGraph, NodeFeatureType
+from entities import NodeFeatureType
+
+if TYPE_CHECKING:
+    from ..Document.DocumentService import DocumentService
+    from entities import WordGraph
 
 
 class AblationService:
@@ -44,8 +45,8 @@ class AblationService:
         self.random_state = random_state
 
         # 공유 데이터 (모든 ablation 실험에서 동일하게 사용)
-        self.doc_service: Optional[DocumentService] = None
-        self.word_graph: Optional[WordGraph] = None
+        self.doc_service: Optional["DocumentService"] = None
+        self.word_graph: Optional["WordGraph"] = None
 
         # 결과 저장
         self.ablation_results: Dict[str, Any] = {}
@@ -421,6 +422,8 @@ class AblationService:
         if torch.cuda.is_available():
             torch.cuda.manual_seed_all(self.random_state)
 
+        from ..Graph.NodeFeatureHandler import NodeFeatureHandler
+
         # NodeFeatureHandler로 임베딩 계산 (random_seed 전달)
         node_feature_handler = NodeFeatureHandler(self.doc_service, random_seed=self.random_state)
         node_features = node_feature_handler.calculate_embeddings(
@@ -432,6 +435,7 @@ class AblationService:
         if use_graphmae:
             # GraphMAE로 임베딩 학습
             from ..GraphMAE import GraphMAEService, GraphMAEConfig
+            from ..Graph.GraphService import GraphService
 
             embed_size = node_features.shape[1]
             mae_config = GraphMAEConfig.create_default(embed_size)
