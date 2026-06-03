@@ -202,6 +202,12 @@ Phase 3 완료 조건:
 - Word2Vec/AttentionFusion 파일은 아직 삭제하지 않고 Phase 6 대상으로 남긴다.
 - 합의된 smoke test와 py_compile 검증이 통과한다.
 
+상태:
+
+- 완료. 브랜치 `refactor/bert-only-node-features`에서 main node feature path를 BERT-only 기준으로 단순화했다.
+- 검증 기준은 `SemGraphConfig`, `NodeFeatureHandler`, `SemGraphPipeline`, ablation CLI py_compile, `pipelines/main.py --help`, `pipelines/ablation_main.py --help`, `PYTHONPATH=core` 기반 BERT-only smoke test로 둔다.
+- `core/services/Word2Vec/*`, `core/services/Graph/AttentionFusion.py`, research/legacy 실험 재배치는 Phase 6에서 처리한다.
+
 ### Phase 4. Ports And Adapters
 
 목표:
