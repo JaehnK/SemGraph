@@ -1,26 +1,21 @@
-from typing import Optional, Tuple
+from typing import Any, List, Optional, TYPE_CHECKING
 import torch
-import dgl
 import sys
 import os
 import numpy as np
 import random
 
-# GraphMAE2 경로 추가
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../GraphMAE2'))
-
-from models.edcoder import PreModel
 from .GraphMAEConfig import GraphMAEConfig
-from ..Graph.GraphService import GraphService
-from ..Graph.NodeFeatureHandler import NodeFeatureHandler
-from entities import WordGraph, Word
-from typing import List
+
+if TYPE_CHECKING:
+    from ..Graph.GraphService import GraphService
+    from entities import Word, WordGraph
 
 
 class GraphMAEService:
     """GraphMAE 기반 노드 임베딩 서비스"""
 
-    def __init__(self, graph_service: GraphService, config: Optional[GraphMAEConfig] = None):
+    def __init__(self, graph_service: "GraphService", config: Optional[GraphMAEConfig] = None):
         """
         Args:
             graph_service: 그래프 생성을 위한 GraphService
@@ -28,12 +23,13 @@ class GraphMAEService:
         """
         self.graph_service = graph_service
         self.config = config or GraphMAEConfig.create_default()
-        self.model: Optional[PreModel] = None
+        self.model: Optional[Any] = None
 
         # NodeFeatureHandler 초기화 (수정된 생성자에 맞춤)
+        from ..Graph.NodeFeatureHandler import NodeFeatureHandler
         self.node_handler = NodeFeatureHandler(graph_service.doc_service)
 
-    def create_mae_model(self, input_dim: int, random_seed: int = 42) -> PreModel:
+    def create_mae_model(self, input_dim: int, random_seed: int = 42) -> Any:
         """
         주어진 입력 차원에 맞는 GraphMAE 모델 생성
 
@@ -57,6 +53,7 @@ class GraphMAEService:
         generator = torch.Generator()
         generator.manual_seed(random_seed)
 
+        PreModel = self._load_premodel_class()
         model = PreModel(
             in_dim=input_dim,
             num_hidden=self.config.hidden_dim,
@@ -90,7 +87,7 @@ class GraphMAEService:
 
         return model
 
-    def prepare_input_features(self, words: List[Word], embed_size: int,
+    def prepare_input_features(self, words: List["Word"], embed_size: int,
                              method: str = 'bert') -> torch.Tensor:
         """
         GraphMAE 입력용 노드 특성 준비
@@ -105,7 +102,7 @@ class GraphMAEService:
         """
         return self.node_handler.calculate_embeddings(words, method, embed_size)
 
-    def pretrain_and_extract(self, word_graph: WordGraph, embed_size: int = 64,
+    def pretrain_and_extract(self, word_graph: "WordGraph", embed_size: int = 64,
                            input_method: str = 'bert') -> torch.Tensor:
         """
         GraphMAE 사전훈련 및 임베딩 추출
@@ -164,7 +161,7 @@ class GraphMAEService:
         print(f"Embeddings are L2-normalized for consistency with SCE loss training objective.")
         return embeddings.cpu()
 
-    def extract_embeddings(self, word_graph: WordGraph, embed_size: int = 64) -> torch.Tensor:
+    def extract_embeddings(self, word_graph: "WordGraph", embed_size: int = 64) -> torch.Tensor:
         """
         사전훈련된 모델에서 임베딩 추출 (훈련 없이)
 
@@ -205,3 +202,12 @@ class GraphMAEService:
         self.model = self.create_mae_model(input_dim)
         self.model.load_state_dict(torch.load(path, map_location='cpu'))
         print(f"Model loaded from {path}")
+
+    @staticmethod
+    def _load_premodel_class():
+        graphmae2_path = os.path.join(os.path.dirname(__file__), '../../GraphMAE2')
+        if graphmae2_path not in sys.path:
+            sys.path.append(graphmae2_path)
+
+        from models.edcoder import PreModel
+        return PreModel
