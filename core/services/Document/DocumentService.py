@@ -96,34 +96,6 @@ class DocumentService:
             return []
         return [sentence.word_indices for sentence in sentences]
     
-    def get_word2vec_data(self, min_count: int = 5) -> Dict[str, Any]:
-        """Word2Vec에 필요한 모든 데이터 반환"""
-        words = self._word_service.get_all_words()
-        
-        # min_count 필터링
-        filtered_words = [w for w in words if w.freq >= min_count]
-        
-        # 새로운 0-indexed ID 맵 생성
-        new_word2id: Dict[str, int] = {}
-        new_id2word: Dict[int, str] = {}
-        new_word_frequency: Dict[int, int] = {}
-        
-        # 0부터 시작하는 새로운 ID 할당
-        for i, word_obj in enumerate(filtered_words):
-            new_word2id[word_obj.content] = i
-            new_id2word[i] = word_obj.content
-            new_word_frequency[i] = word_obj.freq
-            
-        total_tokens = sum(w.freq for w in filtered_words)
-        
-        return {
-            'word2id': new_word2id,
-            'id2word': new_id2word,
-            'word_frequency': new_word_frequency,
-            'vocab_size': len(filtered_words),
-            'total_tokens': total_tokens
-        }
-    
     # === 새로운 Facade 메서드들 ===
     
     def analyze_word(self, word_content: str) -> Dict[str, Any]:

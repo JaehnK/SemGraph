@@ -4,7 +4,7 @@
 __all__ = [
     'DocumentService', 'SentenceProcessingService', 'TextPreprocessingService', 'WordManagementService',
     'SentenceAnalysisService', 'WordAnalysisService', 'WordStatisticsService',
-    'GraphService', 'Word2VecService', 'VisualizationService'
+    'GraphService', 'VisualizationService'
 ]
 
 def __getattr__(name):
@@ -33,20 +33,8 @@ def __getattr__(name):
     elif name == 'GraphService':
         from .Graph.GraphService import GraphService
         return GraphService
-    elif name == 'Word2VecService':
-        from .Word2Vec.Word2VecService import Word2VecService
-        return Word2VecService
     elif name == 'VisualizationService':
         from .Visualization.VisualizationService import VisualizationService
         return VisualizationService
-    elif name == 'MemoryDataLoader':
-        from .Word2Vec.DataLoader import MemoryDataLoader
-        return MemoryDataLoader
-    elif name == 'MemoryWord2vecDataset':
-        from .Word2Vec.DataLoader import MemoryWord2vecDataset
-        return MemoryWord2vecDataset
-    elif name == 'Word2VecTrainer':
-        from .Word2Vec.Trainer import Word2VecTrainer
-        return Word2VecTrainer
     else:
         raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

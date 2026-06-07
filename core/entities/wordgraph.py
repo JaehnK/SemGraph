@@ -10,7 +10,6 @@ class NodeFeatureType(Enum):
     """노드 특성 타입"""
     FREQUENCY = "frequency"           # 단어 빈도 (스칼라)
     BERT_EMBEDDING = "bert_embedding" # BERT 임베딩 (768차원)
-    WORD2VEC = "word2vec"            # Word2Vec 임베딩
     GRAPHMAE = "graphmae"            # GraphMAE 사전훈련 임베딩
     CUSTOM = "custom"                # 사용자 정의
 
@@ -18,7 +17,7 @@ class NodeFeatureType(Enum):
 class EdgeFeatureType(Enum):
     """엣지 특성 타입"""
     CO_OCCURRENCE = "co_occurrence"           # 공출현 빈도
-    SIMILARITY = "similarity"                # 유사도 (w2v, bert 등)
+    SIMILARITY = "similarity"                # 유사도
     COMBINED = "combined"                    # 공출현 + 유사도 조합
     CUSTOM = "custom"  
     
@@ -239,7 +238,7 @@ class WordGraph:
         Args:
             edge_list: [(src_node_id, dst_node_id), ...] 형태의 엣지 리스트
             co_occurrence_weights: 공출현 가중치 리스트
-            similarity_scores: 유사도 점수 리스트 (Word2Vec, BERT 등)
+            similarity_scores: 유사도 점수 리스트
         """
         if not (len(edge_list) == len(co_occurrence_weights) == len(similarity_scores)):
             raise ValueError("Edge list, co-occurrence weights, and similarity scores must have same length")

@@ -25,7 +25,7 @@
 
 ## 3. 통합 Phase 기준
 
-### Phase 0. Baseline And Runtime
+### Phase 0. Baseline And Runtime [부분 완료]
 
 목표:
 
@@ -42,7 +42,7 @@
 
 - 부분 완료. `core/entities/README.md`에 entity Cython build와 Phase 2 domain smoke test 실행법을 기록했다.
 
-### Phase 1. SemGraph Naming Transition
+### Phase 1. SemGraph Naming Transition [완료]
 
 목표:
 
@@ -65,9 +65,9 @@
 
 상태:
 
-- 이전 브랜치 `refactor/semgraph-rename`에서 진행된 것으로 본다.
+- 완료. 브랜치 `refactor/semgraph-rename`에서 완료했고, 이후 `main`에 반영했다.
 
-### Phase 2. Domain Stabilization
+### Phase 2. Domain Stabilization [완료]
 
 목표:
 
@@ -91,7 +91,7 @@
 
 - 완료. 브랜치 `refactor/phase-2-domain-stabilization`에서 완료했다.
 
-### Phase 3. BERT-Only Feature Path
+### Phase 3. BERT-Only Feature Path [완료]
 
 목표:
 
@@ -208,7 +208,7 @@ Phase 3 완료 조건:
 - 검증 기준은 `SemGraphConfig`, `NodeFeatureHandler`, `SemGraphPipeline`, ablation CLI py_compile, `pipelines/main.py --help`, `pipelines/ablation_main.py --help`, `PYTHONPATH=core` 기반 BERT-only smoke test로 둔다.
 - `core/services/Word2Vec/*`, `core/services/Graph/AttentionFusion.py`, research/legacy 실험 재배치는 Phase 6에서 처리한다.
 
-### Phase 4. Ports And Adapters
+### Phase 4. Ports And Adapters [완료]
 
 목표:
 
@@ -297,66 +297,119 @@ Phase 4 완료 조건:
 - BERT, spaCy, GraphMAE2/DGL, matplotlib 의존성은 호출 시점 adapter 뒤로 이동한다.
 - `core/GraphMAE2` nested repo는 이번 Phase에서도 직접 수정하지 않는다.
 
-### Phase 5. Application Pipeline Simplification
+상태:
+
+- 완료. 브랜치 `refactor/phase-4-ports-adapters`에서 완료했고, 이후 `main`에 반영했다.
+
+### Phase 5. Main Path Legacy Cleanup [완료]
 
 목표:
 
-- `SemGraphPipeline`의 과도한 orchestration 책임을 use case 단위로 줄인다.
+- 모델 설계가 확정된 상태에서 main 실행 경로에 남아 있는 legacy embedding 의존성을 제거한다.
+- Word2Vec, concat, attention fusion은 SemGraph의 현재 방법론이 아니므로 main path와 분리한다.
 
 작업:
 
-- load/preprocess, graph build, node feature, GraphMAE train, clustering, evaluation/save를 use case 단위로 분리한다.
-- artifact 저장/시각화/reporting을 pipeline 핵심 흐름에서 분리한다.
-- 결과 파일명과 output path는 `semgraph_*` 기준으로 유지한다.
+- `core/services/Word2Vec/*`, `core/entities/skipgram.py`, `core/services/Graph/AttentionFusion.py`의 main path 참조를 확인한다.
+- main path에서 더 이상 참조되지 않는 legacy embedding 코드는 `legacy/` 또는 `research/`로 격리하거나 삭제 후보로 표시한다.
+- `core/services/__init__.py`의 Word2Vec lazy export를 제거하거나 legacy-only로 명시한다.
+- pipeline/config/ablation import에서 Word2Vec, concat, attention fusion 잔여 참조를 제거한다.
+- GraphMAE2 내부 GAT attention, 일반 `torch.cat`/`np.concatenate` 같은 구현 용어는 제거 대상에서 제외한다.
 
 검증:
 
-- `SemGraphPipeline(config).run()` smoke test가 성공한다.
-- 결과 JSON과 embedding 저장 구조가 필요한 분석 도구와 호환된다.
-
-### Phase 6. Research And Legacy Isolation
-
-목표:
-
-- 실험용 코드와 legacy embedding 경로를 production core에서 분리한다.
-
-작업:
-
-- Word2Vec, concat, attention fusion은 main path 참조를 끊은 뒤 `legacy/` 또는 `research/`로 이동한다.
-- `experiments/`, `analysis/`, `viz/`는 `research/` 영역으로 재배치한다.
-- journal용 experiment runner는 application/use case만 호출하도록 제한한다.
-- ablation은 BERT-only 연구 질문에 맞게 재정의한다.
-
-검증:
-
+- `rg "Word2Vec|w2v|fusion_type|AttentionFusion|embedding_method|concat" core/services pipelines core/entities`
 - main pipeline import 시 Word2Vec, skipgram, AttentionFusion이 로드되지 않는다.
-- ablation unit test와 JSON serialization test가 통과한다.
+- `python -c "from core.services.semgraph import SemGraphConfig, SemGraphPipeline"`
+- `python pipelines/main.py --help`
+- 관련 파일 `py_compile`
+
+상태:
+
+- 완료. 브랜치 `refactor/legacy-embedding-cleanup`에서 Word2Vec, skipgram, AttentionFusion, GRACE compatibility wrapper를 제거했다.
+- `embedding_method`는 BERT-only 설정 검증과 ablation 결과 키로만 유지한다.
+
+완료 조건:
+
+- SemGraph main path는 BERT-only node feature, GraphMAE representation, clustering 흐름만 가진다.
+- legacy embedding 경로는 main path에서 분리되어 후속 실험 설계를 오염시키지 않는다.
+- 삭제 여부가 애매한 코드는 즉시 삭제보다 legacy 격리를 우선한다.
 
 권장 브랜치:
 
-- `refactor/semgraph-ablation`
 - `refactor/legacy-embedding-cleanup`
 
-### Phase 7. Environment And Reproducibility
+### Phase 6. Environment And Reproducibility [예정]
 
 목표:
 
-- 실행/테스트 환경과 실험 재현성을 명확히 한다.
+- ablation과 신규 데이터셋 실험 전에 재현 가능한 실행 환경을 확정한다.
+- 기존 conda freeze 성격의 의존성에서 벗어나 `uv` 기반 환경으로 정리한다.
 
 작업:
 
-- dependency metadata와 lockfile을 정리한다.
-- Cython build, spaCy model, DGL/GraphMAE2 dependency 설치 경로를 명시한다.
-- seed, config, artifact writer, run metadata를 표준화한다.
+- `pyproject.toml`을 도입해 runtime/dev dependency를 구분한다.
+- `uv.lock`을 생성해 설치 상태를 고정한다.
+- 기존 `requirements.txt`는 legacy snapshot으로 보존하거나 ignore 유지한다.
+- Cython build, spaCy model, torch/PyG/DGL/GraphMAE2 설치 흐름을 명시한다.
+- `uv run` 기준 CLI, import smoke, test 실행법을 정리한다.
+- seed, config, artifact writer, run metadata 관리 방식을 표준화한다.
 
 검증:
 
-- 합의된 환경에서 `pytest` 또는 smoke test set 통과
-- CLI help와 import smoke test 통과
+- `uv sync`
+- `uv run python -c "from core.services.semgraph import SemGraphConfig, SemGraphPipeline"`
+- `uv run python pipelines/main.py --help`
+- 합의된 smoke test set 통과
+- GPU 검증은 CPU/import smoke와 분리해서 기록한다.
 
 권장 브랜치:
 
 - `chore/uv-environment`
+
+### Phase 7. Experiment Protocol Build [예정]
+
+목표:
+
+- 데이터셋 추가, ablation 설계, 평가 지표, 최종 실험 프로토콜을 하나의 단계로 확정한다.
+- SemGraph가 일반 텍스트뿐 아니라 학술 텍스트/science mapping 문제에서도 타당한지 검증할 수 있게 한다.
+
+작업:
+
+- 기존 AG News는 proof-of-concept/연결 실험으로 유지한다.
+- arXiv, OpenAlex, PubMed 중 1~2개 학술 데이터셋을 추가한다.
+- dataset config에 `csv_path`, `text_column`, `label_column`, metadata, output path를 명확히 둔다.
+- 외부 라벨 평가가 가능하도록 arXiv category, OpenAlex concept, PubMed MeSH 등 metadata를 보존한다.
+- ablation은 BERT-only SemGraph 기준으로 재정의한다.
+  - mask rate
+  - epochs
+  - output/hidden dimension
+  - encoder/decoder type
+  - edge weight threshold
+  - edge top-k
+  - cluster k selection
+- 평가 지표를 확정한다.
+  - NPMI
+  - Silhouette, Davies-Bouldin, Calinski-Harabasz
+  - Modularity
+  - external label alignment
+  - temporal or seed stability
+- 논문용 결과 저장 구조와 표 생성 방식을 정리한다.
+
+검증:
+
+- 신규 데이터셋 준비 스크립트 smoke 실행
+- dataset별 `pipelines/main.py --config ... --max-docs ...` smoke 실행
+- ablation runner가 dataset/config별 결과 JSON을 생성한다.
+- 반복 seed 결과가 평균/표준편차로 집계된다.
+
+권장 브랜치:
+
+- `feature/experiment-protocol`
+- 필요 시 하위 브랜치:
+  - `feature/add-scholar-datasets`
+  - `refactor/bert-only-ablation-protocol`
+  - `feature/evaluation-metrics`
 
 ## 4. 브랜치 진행 기준
 
@@ -364,18 +417,20 @@ Phase 4 완료 조건:
 
 - `refactor/semgraph-rename`: Phase 1 기준
 - `refactor/phase-2-domain-stabilization`: Phase 2 기준
+- `refactor/bert-only-node-features`: Phase 3 기준
+- `refactor/phase-4-ports-adapters`: Phase 4 기준
 
 권장 다음 브랜치:
 
-- `refactor/bert-only-node-features`: Phase 3 기준
+- `refactor/legacy-embedding-cleanup`: Phase 5 기준
 
 이후 후보:
 
-- `refactor/ports-and-adapters`
-- `refactor/semgraph-pipeline-usecases`
-- `refactor/semgraph-ablation`
-- `refactor/legacy-embedding-cleanup`
 - `chore/uv-environment`
+- `feature/experiment-protocol`
+- `feature/add-scholar-datasets`
+- `refactor/bert-only-ablation-protocol`
+- `feature/evaluation-metrics`
 
 ## 5. 커밋 원칙
 
@@ -390,5 +445,8 @@ Phase 4 완료 조건:
 ## 6. 현재 주의 사항
 
 - `core/GraphMAE2`는 nested git repo 형태이며, 상위 repo의 Phase 작업과 별개로 관리한다.
-- Word2Vec 경로는 아직 살아 있다. Phase 2에서는 `Word` entity에서 embedding 상태만 분리했고, W2V 서비스 제거는 Phase 3 이후 main path 참조가 끊긴 뒤 Phase 6에서 처리한다.
+- 모델 설계 방향은 SemGraph + BERT-only node feature + GraphMAE representation + clustering으로 확정된 상태다.
+- Word2Vec, skipgram, attention fusion, GRACE compatibility wrapper는 Phase 5에서 main path에서 제거했다.
+- 현재 로컬 환경은 `torch_geometric`이 없어 `from core.services import GraphService` 직접 import가 실패한다. Phase 6 uv 환경 정리에서 고정한다.
+- 데이터셋 추가와 ablation은 분리된 작업이 아니라 Phase 7 `Experiment Protocol Build`에서 함께 다룬다.
 - `docs/*`와 기존 연구 산출물은 과거 맥락을 담고 있을 수 있다. 앞으로의 기준은 이 문서만 사용한다.

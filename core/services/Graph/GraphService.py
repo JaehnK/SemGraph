@@ -120,7 +120,7 @@ class GraphService:
             exclude_stopwords: 불용어 제외 여부
             max_length: 문장당 최대 단어 수 제한
             embed_size: 임베딩 크기 (입출력 차원 통일)
-            input_method: GraphMAE 입력 특성 방법 ('bert', 'w2v', 'concat')
+            input_method: GraphMAE 입력 특성 방법. SemGraph는 'bert'만 허용한다.
             mae_config: GraphMAE 설정 (None이면 기본값)
 
         Returns:
