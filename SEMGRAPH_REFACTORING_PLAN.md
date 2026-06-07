@@ -301,7 +301,7 @@ Phase 4 완료 조건:
 
 - 완료. 브랜치 `refactor/phase-4-ports-adapters`에서 완료했고, 이후 `main`에 반영했다.
 
-### Phase 5. Main Path Legacy Cleanup [예정]
+### Phase 5. Main Path Legacy Cleanup [완료]
 
 목표:
 
@@ -323,6 +323,11 @@ Phase 4 완료 조건:
 - `python -c "from core.services.semgraph import SemGraphConfig, SemGraphPipeline"`
 - `python pipelines/main.py --help`
 - 관련 파일 `py_compile`
+
+상태:
+
+- 완료. 브랜치 `refactor/legacy-embedding-cleanup`에서 Word2Vec, skipgram, AttentionFusion, GRACE compatibility wrapper를 제거했다.
+- `embedding_method`는 BERT-only 설정 검증과 ablation 결과 키로만 유지한다.
 
 완료 조건:
 
@@ -441,6 +446,7 @@ Phase 4 완료 조건:
 
 - `core/GraphMAE2`는 nested git repo 형태이며, 상위 repo의 Phase 작업과 별개로 관리한다.
 - 모델 설계 방향은 SemGraph + BERT-only node feature + GraphMAE representation + clustering으로 확정된 상태다.
-- Word2Vec 경로는 아직 살아 있을 수 있다. W2V 서비스, concat, attention fusion 정리는 Phase 5에서 main path 기준으로 처리한다.
+- Word2Vec, skipgram, attention fusion, GRACE compatibility wrapper는 Phase 5에서 main path에서 제거했다.
+- 현재 로컬 환경은 `torch_geometric`이 없어 `from core.services import GraphService` 직접 import가 실패한다. Phase 6 uv 환경 정리에서 고정한다.
 - 데이터셋 추가와 ablation은 분리된 작업이 아니라 Phase 7 `Experiment Protocol Build`에서 함께 다룬다.
 - `docs/*`와 기존 연구 산출물은 과거 맥락을 담고 있을 수 있다. 앞으로의 기준은 이 문서만 사용한다.

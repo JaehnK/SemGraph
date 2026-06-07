@@ -95,7 +95,7 @@ class GraphMAEService:
         Args:
             words: 단어 리스트
             embed_size: 임베딩 크기 (입출력 차원 통일)
-            method: 특성 계산 방법 ('bert', 'w2v', 'concat')
+            method: 특성 계산 방법. SemGraph는 'bert'만 허용한다.
 
         Returns:
             [num_nodes, embed_size] 형태의 특성 텐서
