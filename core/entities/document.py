@@ -23,8 +23,8 @@ class Document:
         return bool(self.content and self.content.strip())
 
 
-class Documents:
-    """전체 문서 컬렉션의 데이터 레이어"""
+class Corpus:
+    """전처리 대상 문서 컬렉션 도메인 모델"""
     
     def __init__(self):
         # 핵심 데이터 3개
@@ -80,11 +80,9 @@ class Documents:
             return None
         
         try:
-            all_words = self._word_trie.get_all_words()
-            print(f"🔍 Documents.words_list: WordTrie returned {len(all_words) if all_words else 0} words")
-            return all_words
+            return self._word_trie.get_all_words()
         except Exception as e:
-            print(f"❌ Error getting words from WordTrie: {e}")
+            print(f"Error getting words from WordTrie: {e}")
             return None
     
     def get_document_count(self) -> int:
@@ -117,7 +115,7 @@ class Documents:
             word_obj = self._word_trie.insert_or_get_word(word_content, pos_tag)
             return word_obj
         except Exception as e:
-            print(f"❌ Error in Documents.add_word: {e}")
+            print(f"Error in Corpus.add_word: {e}")
             raise
     
     def get_co_occurrence_edges(self, word_to_node: Dict[str, int]):
@@ -144,7 +142,7 @@ class Documents:
     
     def __str__(self):
         """기존 Docs.__str__ 호환"""
-        return (f"Documents: {self.get_document_count()} docs, "
+        return (f"Corpus: {self.get_document_count()} docs, "
                 f"{self.get_sentence_count()} sentences, "
                 f"{self.get_word_count()} unique words")
     
@@ -154,3 +152,12 @@ class Documents:
     
     def __len__(self):
         return self.get_document_count()
+
+
+class Documents(Corpus):
+    """기존 코드 호환을 위한 Corpus 별칭."""
+
+    def __str__(self):
+        return (f"Documents: {self.get_document_count()} docs, "
+                f"{self.get_sentence_count()} sentences, "
+                f"{self.get_word_count()} unique words")

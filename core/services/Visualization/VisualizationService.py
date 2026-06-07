@@ -107,7 +107,7 @@ class VisualizationService:
         Args:
             results_dict: {method_name: {metric: value}} 형식
                 예: {
-                    'GRACE': {'silhouette': 0.45, 'davies_bouldin': 1.2},
+                    'SemGraph': {'silhouette': 0.45, 'davies_bouldin': 1.2},
                     'TF-IDF': {'silhouette': 0.30, 'davies_bouldin': 1.8}
                 }
             filename: 저장 파일명

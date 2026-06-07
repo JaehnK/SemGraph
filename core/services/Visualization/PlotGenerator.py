@@ -113,7 +113,7 @@ class PlotGenerator:
 
         Args:
             results_dict: {method_name: {metric: value}} 형식
-                예: {'GRACE': {'silhouette': 0.45, 'davies_bouldin': 1.2}}
+                예: {'SemGraph': {'silhouette': 0.45, 'davies_bouldin': 1.2}}
             save_path: 저장 경로
             metrics: 표시할 메트릭 리스트 (None이면 모든 메트릭)
             figsize: 그림 크기

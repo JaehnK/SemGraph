@@ -7,6 +7,7 @@ import spacy
 from entities import *
 
 from .TextPreprocssingService import TextPreprocessingService
+from ..Sentence.SentenceAnalysisService import SentenceAnalysisService
 
 import sys
 from typing import List, Optional, Dict
@@ -15,7 +16,7 @@ import threading
 class SentenceProcessingService:
     """문장 처리 서비스"""
     
-    def __init__(self, documents: Documents, preprocessing_service: TextPreprocessingService):
+    def __init__(self, documents: Corpus, preprocessing_service: TextPreprocessingService):
         self._documents = documents
         self._preprocessing = preprocessing_service
     
@@ -47,8 +48,13 @@ class SentenceProcessingService:
             
             for (original_idx, original_text), spacy_doc in zip(valid_docs, processed_docs):
                 try:
-                    sentence = Sentence(docs_ref=self._documents)
-                    sentence.set_from_spacy_doc(spacy_doc, original_text)
+                    sentence = Sentence(raw=original_text, docs_ref=self._documents)
+                    SentenceAnalysisService.process_with_spacy(
+                        sentence,
+                        spacy_doc,
+                        self._documents,
+                        original_text=original_text,
+                    )
                     sentences[original_idx] = sentence
                     
                     if original_idx % 100 == 0 and original_idx > 0:
@@ -99,13 +105,14 @@ class SentenceProcessingService:
             try:
                 import contractions # 함수 내에서 임포트하여 필요할 때만 로드
                 expanded_doc_text = contractions.fix(doc_text)
-                # 새로운 방식: 생성자에서 raw 텍스트 설정
-                sentence = Sentence(raw=expanded_doc_text, docs_ref=self._documents)
-                
-                # 기존 호환성: raw property setter가 자동 처리 수행
-                if not sentence.is_processed:
-                    sentence.raw = doc_text  # property setter 호출
-                
+                sentence = Sentence(raw=doc_text, docs_ref=self._documents)
+                spacy_doc = self._preprocessing.nlp(expanded_doc_text)
+                SentenceAnalysisService.process_with_spacy(
+                    sentence,
+                    spacy_doc,
+                    self._documents,
+                    original_text=doc_text,
+                )
                 sentences.append(sentence)
             except Exception as e:
                 print(f'Document {i} processing failed: {e}', file=sys.stderr)
@@ -116,8 +123,5 @@ class SentenceProcessingService:
     def _create_empty_sentence(self, text: str) -> Sentence:
         """실패한 경우 빈 Sentence 객체 생성"""
         sentence = Sentence(raw=text, docs_ref=self._documents)
-        sentence.lemmatised = []
-        sentence.word_objects = []
-        sentence.word_indices = []
-        sentence.is_processed = True  # 처리 완료로 마크 (빈 결과라도)
+        sentence.set_processed_data([], [], [])
         return sentence
