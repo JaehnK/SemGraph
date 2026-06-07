@@ -66,11 +66,7 @@ def create_default_config() -> SemGraphConfig:
         edge_weight_threshold=5,  # 5 이하 공출현은 고려하지 않음
 
         # 임베딩
-        embedding_method='concat',  # bert + word2vec
-        fusion_type='gated',
         embed_size=256,
-        w2v_dim=128,
-        bert_dim=128,
 
         # GraphMAE
         graphmae_epochs=1000,
@@ -364,7 +360,7 @@ Examples:
     print(f"\n{Fore.CYAN}Configuration:{Style.RESET_ALL}")
     print(f"  Data: {config.csv_path}")
     print(f"  Max docs: {config.num_documents}")
-    print(f"  Embedding method: {config.embedding_method}")
+    print(f"  Node features: BERT-only")
     print(f"  Embed size: {config.embed_size}")
     print(f"  Edge filtering:")
     if config.edge_top_k > 0:

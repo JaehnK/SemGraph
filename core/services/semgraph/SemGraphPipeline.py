@@ -4,7 +4,7 @@ SemGraph Pipeline
 전체 파이프라인:
 1. 데이터 전처리 (DocumentService)
 2. 의미연결망 구축 (GraphService)
-3. 멀티모달 임베딩 (Word2Vec + BERT)
+3. BERT 노드 임베딩
 4. GraphMAE 자기지도학습
 5. 클러스터링 (K-means, DBSCAN 등)
 6. 평가 및 결과 분석
@@ -207,11 +207,11 @@ class SemGraphPipeline:
         self._log(f"  최종 엣지 수: {self.word_graph.num_edges}")
 
     # ============================================================
-    # 3. 멀티모달 노드 특성 계산
+    # 3. BERT 노드 특성 계산
     # ============================================================
 
     def compute_node_features(self) -> None:
-        """멀티모달 임베딩 계산 (Word2Vec + BERT)"""
+        """BERT 기반 노드 특성 계산"""
         from ..Graph.NodeFeatureHandler import NodeFeatureHandler
         from entities import NodeFeatureType
 
@@ -219,29 +219,12 @@ class SemGraphPipeline:
             raise RuntimeError("WordGraph가 생성되지 않았습니다. build_semantic_network()를 먼저 호출하세요.")
 
         self.node_feature_handler = NodeFeatureHandler(self.doc_service, random_seed=self.config.random_seed)
+        self._log(f"  노드 특성: BERT({self.config.embed_size})")
 
-        method_desc = {
-            'concat': f"Word2Vec({self.config.w2v_dim}) + BERT({self.config.bert_dim})",
-            'w2v': f"Word2Vec({self.config.embed_size})",
-            'bert': f"BERT({self.config.embed_size})",
-            'attention': f"Attention Fusion ({self.config.fusion_type}, {self.config.embed_size}d)"
-        }
-        self._log(f"  임베딩 방법: {method_desc[self.config.embedding_method]}")
-
-        # Attention fusion의 경우 fusion_type 전달
-        if self.config.embedding_method == 'attention':
-            self.node_features = self.node_feature_handler.calculate_embeddings(
-                self.word_graph.words,
-                method=self.config.embedding_method,
-                embed_size=self.config.embed_size,
-                fusion_type=self.config.fusion_type
-            )
-        else:
-            self.node_features = self.node_feature_handler.calculate_embeddings(
-                self.word_graph.words,
-                method=self.config.embedding_method,
-                embed_size=self.config.embed_size
-            )
+        self.node_features = self.node_feature_handler.calculate_embeddings(
+            self.word_graph.words,
+            embed_size=self.config.embed_size
+        )
 
         self._log(f"  노드 특성 형태: {self.node_features.shape}")
 
