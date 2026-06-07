@@ -339,7 +339,7 @@ Phase 4 완료 조건:
 
 - `refactor/legacy-embedding-cleanup`
 
-### Phase 6. Environment And Reproducibility [예정]
+### Phase 6. Environment And Reproducibility [완료]
 
 목표:
 
@@ -355,6 +355,16 @@ Phase 4 완료 조건:
 - `uv run` 기준 CLI, import smoke, test 실행법을 정리한다.
 - seed, config, artifact writer, run metadata 관리 방식을 표준화한다.
 
+실행 기준:
+
+- Python 범위는 DGL/GraphMAE2 호환성을 우선해 `>=3.9,<3.12`로 둔다.
+- 루트 `requirements.txt`는 conda 로컬 경로가 포함된 legacy snapshot으로 남긴다.
+- 루트 환경은 `pyproject.toml`과 `uv.lock`을 기준으로 한다.
+- Cython entity extension은 `cd core/entities && uv run python _cython_setup.py build_ext --inplace`로 빌드한다.
+- spaCy는 Python 3.9 wheel 설치성과 thinc ABI 호환성을 위해 `spacy>=3.7.4,<3.8`, `en_core_web_sm==3.7.1`, `numpy<2` 조합으로 고정한다.
+- DGL 2.1 GraphBolt wheel은 torch `2.0.0`부터 `2.2.1`까지만 제공하므로 `torch==2.2.1`, `torchdata>=0.7,<0.8`로 고정한다.
+- 기본 smoke는 CPU/import/CLI 기준으로 검증하고, GPU/DGL/GraphMAE 학습 검증은 별도 기록한다.
+
 검증:
 
 - `uv sync`
@@ -362,6 +372,17 @@ Phase 4 완료 조건:
 - `uv run python pipelines/main.py --help`
 - 합의된 smoke test set 통과
 - GPU 검증은 CPU/import smoke와 분리해서 기록한다.
+
+상태:
+
+- 완료. 브랜치 `chore/uv-environment`에서 `pyproject.toml`과 `uv.lock`을 도입했다.
+- `PYTHONPATH=core uv run python -c "from core.services.semgraph import SemGraphConfig, SemGraphPipeline"` 통과.
+- `PYTHONPATH=core uv run python -c "from core.services import GraphService"` 통과.
+- `PYTHONPATH=core uv run python pipelines/main.py --help` 통과.
+- `PYTHONPATH=core uv run python pipelines/ablation_main.py --help` 통과.
+- `cd core/entities && uv run python _cython_setup.py build_ext --inplace` 통과.
+- `PYTHONPATH=core uv run python -m pytest -q tests/entities/test_phase2_domain_stabilization.py tests/services/Graph/test_bert_only_node_features.py tests/services/Experiment/test_ablation_service.py` 결과 `38 passed, 1 skipped`.
+- 로컬 CUDA/NVML 초기화 경고는 남아 있으므로 GPU 학습 검증은 별도 단계로 유지한다.
 
 권장 브랜치:
 
