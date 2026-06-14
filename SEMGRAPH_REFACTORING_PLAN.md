@@ -379,9 +379,7 @@ Phase 4 완료 조건:
 - `PYTHONPATH=core uv run python -c "from core.services.semgraph import SemGraphConfig, SemGraphPipeline"` 통과.
 - `PYTHONPATH=core uv run python -c "from core.services import GraphService"` 통과.
 - `PYTHONPATH=core uv run python pipelines/main.py --help` 통과.
-- `PYTHONPATH=core uv run python pipelines/ablation_main.py --help` 통과.
 - `cd core/entities && uv run python _cython_setup.py build_ext --inplace` 통과.
-- `PYTHONPATH=core uv run python -m pytest -q tests/entities/test_phase2_domain_stabilization.py tests/services/Graph/test_bert_only_node_features.py tests/services/Experiment/test_ablation_service.py` 결과 `38 passed, 1 skipped`.
 - 로컬 CUDA/NVML 초기화 경고는 남아 있으므로 GPU 학습 검증은 별도 단계로 유지한다.
 
 권장 브랜치:
@@ -394,6 +392,7 @@ Phase 4 완료 조건:
 
 - 데이터셋 추가, ablation 설계, 평가 지표, 최종 실험 프로토콜을 하나의 단계로 확정한다.
 - SemGraph가 일반 텍스트뿐 아니라 학술 텍스트/science mapping 문제에서도 타당한지 검증할 수 있게 한다.
+- 기존 ablation runner와 연구 스크립트는 제거하고, dataset-aware experiment runner를 새로 작성한다.
 
 작업:
 
