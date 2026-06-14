@@ -91,6 +91,9 @@ core/DistillBERT/
 # -----------------------------------------------------------------------------
 # Local research notes / non-source working areas
 # -----------------------------------------------------------------------------
+*.md
+!README.md
+!**/README.md
 CLASS_FUNCTIONAL_SPEC.md
 PROJECT_AUDIT_REPORT.md
 REFACTORING_UML.md
