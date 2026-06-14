@@ -1,6 +1,6 @@
 import torch
 import numpy as np
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from transformers import DistilBertTokenizer, DistilBertModel
 import sys
 import os
@@ -20,7 +20,7 @@ class BertService:
     BERT 서비스 - 파이프라인 관리
     """
 
-    def __init__(self, docs: DocumentService, model_path: str | None = None):
+    def __init__(self, docs: DocumentService, model_path: Optional[str] = None):
 
         self.docs = docs
         root_dir = Path(__file__).resolve().parents[3]
