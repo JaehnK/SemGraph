@@ -201,8 +201,7 @@ Examples:
   # 소규모 테스트
   python pipelines/main.py --mode train --max-docs 1000 --epochs 100
 
-  # Ablation study는 별도 스크립트 사용
-  python pipelines/ablation_main.py --all
+  # 실험 프로토콜은 Phase 7에서 dataset-aware runner로 재작성 예정
         """
     )
 

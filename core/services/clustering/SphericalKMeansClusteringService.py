@@ -24,6 +24,8 @@ class SphericalKMeansClusteringService(ClusteringInterface):
         super().__init__(random_state)
         # NumPy random generator 생성 (재현성 보장)
         self.rng = np.random.default_rng(random_state)
+        self.k_selection_method = None
+        self.k_selection_fallback_used = False
 
     def fit_predict(
         self,
@@ -90,6 +92,8 @@ class SphericalKMeansClusteringService(ClusteringInterface):
                 n_init=n_init
             )
         elif method == 'gap':
+            self.k_selection_method = 'gap'
+            self.k_selection_fallback_used = False
             return self._auto_clustering_with_gap(
                 embeddings,
                 min_clusters=min_clusters,
@@ -97,6 +101,8 @@ class SphericalKMeansClusteringService(ClusteringInterface):
                 n_init=n_init
             )
         else:  # elbow
+            self.k_selection_method = 'elbow'
+            self.k_selection_fallback_used = False
             return self._auto_clustering_with_elbow(
                 embeddings,
                 min_clusters=min_clusters,
@@ -132,6 +138,8 @@ class SphericalKMeansClusteringService(ClusteringInterface):
             print("Warning: kneed 라이브러리가 설치되어 있지 않습니다.")
             print("pip install kneed 로 설치하거나 method='elbow'를 사용하세요.")
             print("Fallback to Elbow Method...")
+            self.k_selection_method = 'elbow_fallback'
+            self.k_selection_fallback_used = True
             return self._auto_clustering_with_elbow(embeddings, min_clusters, max_clusters, n_init)
 
         embeddings_np = embeddings.numpy() if isinstance(embeddings, torch.Tensor) else embeddings
@@ -169,11 +177,15 @@ class SphericalKMeansClusteringService(ClusteringInterface):
         )
 
         if kneedle.knee is not None:
+            self.k_selection_method = 'kneedle'
+            self.k_selection_fallback_used = False
             self.best_k = kneedle.knee
         else:
             # Knee가 탐지되지 않으면 Silhouette score가 가장 높은 k 선택
             print("Warning: Kneedle이 knee point를 찾지 못했습니다.")
             print("         Silhouette score가 가장 높은 k를 선택합니다.")
+            self.k_selection_method = 'silhouette_fallback'
+            self.k_selection_fallback_used = True
             self.best_k = k_range[np.argmax(self.silhouette_scores)]
 
         # 최적 k로 최종 클러스터링
@@ -213,6 +225,8 @@ class SphericalKMeansClusteringService(ClusteringInterface):
             print("Warning: gapstatistics 라이브러리가 설치되어 있지 않습니다.")
             print("pip install gapstatistics 로 설치하거나 method='elbow'를 사용하세요.")
             print("Fallback to Elbow Method...")
+            self.k_selection_method = 'elbow_fallback'
+            self.k_selection_fallback_used = True
             return self._auto_clustering_with_elbow(embeddings, min_clusters, max_clusters, n_init)
 
         embeddings_np = embeddings.numpy() if isinstance(embeddings, torch.Tensor) else embeddings
@@ -269,6 +283,10 @@ class SphericalKMeansClusteringService(ClusteringInterface):
         Returns:
             (cluster_labels, best_k, inertias, silhouette_scores)
         """
+        if self.k_selection_method is None:
+            self.k_selection_method = 'elbow'
+            self.k_selection_fallback_used = False
+
         embeddings_np = embeddings.numpy() if isinstance(embeddings, torch.Tensor) else embeddings
         embeddings_normalized = self._normalize(embeddings_np)
 
