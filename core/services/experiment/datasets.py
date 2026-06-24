@@ -46,15 +46,16 @@ class DatasetMaterializer:
         metadata_path = csv_path.with_suffix(".metadata.json")
         if csv_path.exists():
             df = pd.read_csv(csv_path)
-            return PreparedDataset(
-                name=spec.name,
-                csv_path=str(csv_path),
-                text_column=TEXT_COLUMN,
-                num_documents=len(df),
-                source=_source_name(spec.name),
-                label_column=LABEL_COLUMN if LABEL_COLUMN in df.columns else None,
-                metadata={"reused": True, "metadata_path": str(metadata_path)},
-            )
+            if spec.name != "arxiv" or len(df) >= spec.num_documents:
+                return PreparedDataset(
+                    name=spec.name,
+                    csv_path=str(csv_path),
+                    text_column=TEXT_COLUMN,
+                    num_documents=len(df),
+                    source=_source_name(spec.name),
+                    label_column=LABEL_COLUMN if LABEL_COLUMN in df.columns else None,
+                    metadata={"reused": True, "metadata_path": str(metadata_path)},
+                )
 
         if spec.name == "ag_news":
             df = self._load_ag_news(spec, seed)
@@ -139,6 +140,7 @@ class DatasetMaterializer:
         stream = stream.shuffle(seed=seed, buffer_size=10_000)
 
         records: List[Dict[str, str]] = []
+        overflow_records: List[Dict[str, str]] = []
         per_label = max(1, math.ceil(spec.num_documents / len(_ARXIV_TOP_LEVELS)))
         label_counts = {label: 0 for label in _ARXIV_TOP_LEVELS}
         max_scan = max(10_000, spec.num_documents * 200)
@@ -150,16 +152,21 @@ class DatasetMaterializer:
             label = _primary_arxiv_category(row.get("categories"))
             if spec.balanced and label not in label_counts:
                 continue
-            if spec.balanced and label_counts[label] >= per_label:
-                continue
-
             text = _normalise_text(f"{row.get('title', '')}. {row.get('abstract', '')}")
             if not text:
                 continue
 
-            records.append({TEXT_COLUMN: text, LABEL_COLUMN: label})
+            record = {TEXT_COLUMN: text, LABEL_COLUMN: label}
+            if spec.balanced and label_counts[label] >= per_label:
+                overflow_records.append(record)
+                continue
+
+            records.append(record)
             if label in label_counts:
                 label_counts[label] += 1
+
+        if len(records) < spec.num_documents:
+            records.extend(overflow_records[: spec.num_documents - len(records)])
 
         return _clean_frame(pd.DataFrame(records))
 
@@ -198,7 +205,26 @@ class DatasetMaterializer:
         return result.sample(frac=1.0, random_state=seed).head(num_documents).reset_index(drop=True)
 
 
-_ARXIV_TOP_LEVELS = ("cs", "math", "physics", "stat", "q-bio", "q-fin", "econ", "eess")
+_ARXIV_TOP_LEVELS = (
+    "astro-ph",
+    "cond-mat",
+    "cs",
+    "gr-qc",
+    "hep-ex",
+    "hep-lat",
+    "hep-ph",
+    "hep-th",
+    "math",
+    "math-ph",
+    "nlin",
+    "nucl-ex",
+    "nucl-th",
+    "physics",
+    "q-bio",
+    "q-fin",
+    "quant-ph",
+    "stat",
+)
 _WHITESPACE_RE = re.compile(r"\s+")
 
 
@@ -220,7 +246,7 @@ def _normalise_text(value: Any) -> str:
 def _primary_arxiv_category(value: Any) -> str:
     if isinstance(value, Iterable) and not isinstance(value, str):
         value = next(iter(value), "")
-    token = str(value or "").split()[0]
+    token = str(value or "").split()[0].strip("[]'\",")
     if token.startswith("physics."):
         return "physics"
     return token.split(".")[0] if token else "unknown"
