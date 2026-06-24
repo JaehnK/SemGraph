@@ -18,7 +18,9 @@ from .datasets import DatasetMaterializer, PreparedDataset
 from .specs import ExperimentRunSpec
 from ..Metric import MetricsService
 from ..clustering import SphericalKMeansClusteringService
-from ..semgraph import SemGraphConfig, SemGraphPipeline, TraditionalGraphClusteringService
+from ..semgraph.SemGraphConfig import SemGraphConfig
+from ..semgraph.SemGraphPipeline import SemGraphPipeline
+from ..semgraph.TraditionalGraphClusteringService import TraditionalGraphClusteringService
 
 
 class ExperimentRunner:
