@@ -234,6 +234,20 @@ class SemGraphPipeline:
     # 4. GraphMAE 자기지도학습
     # ============================================================
 
+    def _default_graph_device(self) -> str:
+        """CUDA only when both torch and the installed DGL build support it."""
+        if not torch.cuda.is_available():
+            return "cpu"
+
+        import dgl
+
+        try:
+            dgl.graph(([0], [0])).to("cuda")
+        except dgl.DGLError:
+            self._log("  ⚠️ 설치된 DGL이 CUDA를 지원하지 않아 GraphMAE를 CPU로 학습합니다.")
+            return "cpu"
+        return "cuda"
+
     def train_graphmae(self) -> None:
         """GraphMAE 사전학습 및 임베딩 추출"""
         from ..GraphMAE import GraphMAEService, GraphMAEConfig
@@ -254,9 +268,7 @@ class SemGraphPipeline:
         mae_config.mask_rate = self.config.mask_rate
         mae_config.encoder_type = self.config.encoder_type
         mae_config.decoder_type = self.config.decoder_type
-        mae_config.device = self.config.graphmae_device or (
-            "cuda" if torch.cuda.is_available() else "cpu"
-        )
+        mae_config.device = self.config.graphmae_device or self._default_graph_device()
 
         self._log(f"  학습 설정: {mae_config.max_epochs} epochs, device: {mae_config.device}")
         self._log(f"  Encoder: {mae_config.encoder_type}, Decoder: {mae_config.decoder_type}")

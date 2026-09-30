@@ -11,9 +11,9 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import networkx as nx
 import numpy as np
-import pandas as pd
 from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
 
+from .aggregate import write_summary_tables
 from .datasets import DatasetMaterializer, PreparedDataset
 from .specs import ExperimentRunSpec
 from ..Metric import MetricsService
@@ -43,7 +43,7 @@ class ExperimentRunner:
             specs_list = specs_list[:max_runs]
 
         summaries = [self.run(spec) for spec in specs_list]
-        self._write_flat_summary(summaries)
+        write_summary_tables(self.results_dir)
         return summaries
 
     def run(self, spec: ExperimentRunSpec) -> Dict[str, Any]:
@@ -303,36 +303,6 @@ class ExperimentRunner:
             "metrics": {},
             "k_selection": {},
         }
-
-    def _write_flat_summary(self, summaries: List[Dict[str, Any]]) -> None:
-        rows = []
-        for summary in summaries:
-            run = summary["run"]
-            dataset = summary["dataset"]
-            for model in summary["models"]:
-                row = {
-                    "run_id": run["run_id"],
-                    "preset": run["preset"],
-                    "dataset": dataset["name"],
-                    "seed": run["seed"],
-                    "ablation_axis": run.get("ablation_axis"),
-                    "ablation_value": run.get("ablation_value"),
-                    "model": model["model"],
-                    "skipped": model["skipped"],
-                    "num_clusters": model["num_clusters"],
-                    "selected_k": model.get("k_selection", {}).get("selected_k"),
-                    "selection_method": model.get("k_selection", {}).get("selection_method"),
-                    "fallback_used": model.get("k_selection", {}).get("fallback_used"),
-                    "duration_seconds": summary["duration_seconds"],
-                }
-                row.update(model.get("metrics", {}))
-                rows.append(row)
-
-        if not rows:
-            return
-        self.results_dir.mkdir(parents=True, exist_ok=True)
-        output_path = self.results_dir / "experiment_summary.csv"
-        pd.DataFrame(rows).to_csv(output_path, index=False)
 
     def _write_json(self, path: Path, payload: Dict[str, Any]) -> None:
         path.write_text(

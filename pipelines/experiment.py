@@ -2,7 +2,8 @@
 """SemGraph experiment runner.
 
 Use ``plan`` before ``run`` to inspect the generated preliminary, main, or
-ablation protocol.
+ablation protocol. ``aggregate`` rebuilds the flat and seed-aggregated summary
+CSVs from every run already on disk.
 """
 
 from __future__ import annotations
@@ -25,11 +26,14 @@ sys.path.insert(0, str(ROOT_DIR))
 sys.path.insert(0, str(ROOT_DIR / "core"))
 
 from core.services.experiment import ABLATION_AXES, DATASET_NAMES, build_run_specs
-from core.services.experiment.runner import ExperimentRunner
+from core.services.experiment.aggregate import write_summary_tables
 
 
 def main() -> int:
     args = _parse_args()
+    if args.command == "aggregate":
+        return _aggregate(Path(args.output_dir) / "results")
+
     dataset_names = _normalise_multi(args.dataset, DATASET_NAMES)
     axes = _normalise_multi(args.axis, ABLATION_AXES)
 
@@ -54,6 +58,8 @@ def main() -> int:
             "main/ablation runs are large. Pass --allow-large or use --max-runs."
         )
 
+    from core.services.experiment.runner import ExperimentRunner
+
     runner = ExperimentRunner(output_dir=args.output_dir)
     summaries = runner.run_many(specs)
     print(f"Completed {len(summaries)} run(s).")
@@ -61,9 +67,23 @@ def main() -> int:
     return 0
 
 
+def _aggregate(results_dir: Path) -> int:
+    paths = write_summary_tables(results_dir)
+    if not paths:
+        print(f"No run summaries found under {results_dir}")
+        return 1
+    for path in paths.values():
+        print(f"Wrote {path}")
+    return 0
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run SemGraph experiment protocols.")
-    parser.add_argument("command", choices=("plan", "run"))
+    parser.add_argument(
+        "command",
+        choices=("plan", "run", "aggregate"),
+        help="aggregate rebuilds the summary CSVs from all runs under --output-dir.",
+    )
     parser.add_argument(
         "--preset",
         choices=("smoke", "preliminary", "main", "ablation"),
