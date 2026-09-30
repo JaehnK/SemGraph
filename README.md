@@ -21,7 +21,9 @@ corpus (CSV)
 - Linux, Python 3.9–3.11
 - [uv](https://docs.astral.sh/uv/)
 - A C/C++ compiler for the Cython extensions
-- A CUDA GPU is optional. Without one, training runs on the CPU.
+- A CUDA GPU is optional. The locked DGL wheel is CPU-only, so GraphMAE
+  training runs on the CPU even when torch can see a GPU. To train on the GPU,
+  install a CUDA build of DGL 2.1 that matches torch 2.2.1.
 
 The dependency versions are pinned in `pyproject.toml` and `uv.lock`. A few of
 them are pinned because the others require it:
@@ -121,6 +123,9 @@ uv run python pipelines/experiment.py run --preset preliminary --dataset ag_news
 
 # main and ablation are large and are capped unless --allow-large is given
 uv run python pipelines/experiment.py run --preset ablation --axis mask_rate --max-runs 4
+
+# Rebuild the summary tables from every run on disk
+uv run python pipelines/experiment.py aggregate
 ```
 
 The output is written under `artifacts/experiments/`:
@@ -130,6 +135,7 @@ artifacts/experiments/
 ├── datasets/                       # sampled CSVs + metadata per dataset/seed
 └── results/
     ├── experiment_summary.csv      # one row per run and model
+    ├── experiment_aggregate.csv    # mean/std over seeds per preset, dataset, config and model
     └── <preset>/<run_id>/
         ├── experiment_summary.json
         └── semgraph/               # full pipeline artifacts
