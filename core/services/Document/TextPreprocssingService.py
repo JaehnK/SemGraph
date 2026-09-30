@@ -2,8 +2,6 @@ import sys
 from typing import List, Optional, Dict
 import threading
 
-import spacy
-
 from entities import *
 
 class TextPreprocessingService:
@@ -17,14 +15,16 @@ class TextPreprocessingService:
         self._initialize_spacy()
     
     def _initialize_spacy(self):
-        """spaCy 모델 초기화"""
+        """spaCy 모델 초기화 (spaCy는 이 시점에만 import)"""
+        import spacy
+
         try:
             self._nlp = spacy.load(self._model_name, disable=self._disable_components)
             self._nlp.max_length = 2000000
             print(f"Loaded spaCy model: {self._model_name}", file=sys.stderr)
-        except OSError as e:
-            print(f"spaCy model '{self.model_name}' not found. Please install it:", file=sys.stderr)
-            print(f"python -m spacy download {self.model_name}", file=sys.stderr)
+        except OSError:
+            print(f"spaCy model '{self._model_name}' not found. Please install it:", file=sys.stderr)
+            print(f"python -m spacy download {self._model_name}", file=sys.stderr)
             raise
         
     @property
