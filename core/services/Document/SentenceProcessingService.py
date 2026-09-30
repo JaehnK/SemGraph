@@ -2,8 +2,6 @@ import sys
 from typing import List, Optional, Dict
 import threading
 
-import spacy
-
 from entities import *
 
 from .TextPreprocssingService import TextPreprocessingService

@@ -2,8 +2,6 @@ import sys
 from typing import List, Optional, Dict, Any
 import threading
 
-import spacy
-
 from entities import *
 
 from .TextPreprocssingService import TextPreprocessingService
@@ -15,12 +13,12 @@ from ..Word.wordStatisticsService import WordStatisticsService
 class DocumentService:
     """문서 처리 Facade 서비스 - 다른 서비스들을 조율"""
     
-    def __init__(self, model_name='en_core_web_sm', disable_components=None):
+    def __init__(self, model_name='en_core_web_sm', disable_components=None, preprocessor=None):
         # 데이터 레이어
         self._documents = Corpus()
         
-        # 서비스 레이어들
-        self._preprocessing = TextPreprocessingService(model_name, disable_components)
+        # 서비스 레이어들 (preprocessor를 주입하면 spaCy 모델을 로드하지 않는다)
+        self._preprocessing = preprocessor or TextPreprocessingService(model_name, disable_components)
         self._sentence_service = SentenceProcessingService(self._documents, self._preprocessing)
         self._word_service = WordManagementService(self._documents)
         self._word_analysis = WordAnalysisService()
