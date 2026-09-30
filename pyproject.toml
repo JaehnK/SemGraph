@@ -41,3 +41,13 @@ research = [
 
 [tool.uv]
 package = false
+
+# DGL publishes CUDA builds only on its own wheel server, not on PyPI.
+[[tool.uv.index]]
+name = "dgl-cu121"
+url = "https://data.dgl.ai/wheels/cu121/repo.html"
+format = "flat"
+explicit = true
+
+[tool.uv.sources]
+dgl = { index = "dgl-cu121" }

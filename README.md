@@ -18,12 +18,12 @@ corpus (CSV)
 
 ## Requirements
 
-- Linux, Python 3.9–3.11
+- Linux x86_64, Python 3.9–3.11
 - [uv](https://docs.astral.sh/uv/)
 - A C/C++ compiler for the Cython extensions
-- A CUDA GPU is optional. The locked DGL wheel is CPU-only, so GraphMAE
-  training runs on the CPU even when torch can see a GPU. To train on the GPU,
-  install a CUDA build of DGL 2.1 that matches torch 2.2.1.
+- An NVIDIA GPU with a driver that supports CUDA 12.1. The lock file installs
+  the CUDA 12.1 builds of torch and DGL. Without a usable GPU, GraphMAE
+  training falls back to the CPU.
 
 The dependency versions are pinned in `pyproject.toml` and `uv.lock`. A few of
 them are pinned because the others require it:
@@ -31,7 +31,7 @@ them are pinned because the others require it:
 | Package | Pin | Reason |
 |---|---|---|
 | `torch` | `2.2.1` | DGL 2.1 GraphBolt wheels exist only for torch 2.0.0–2.2.1 |
-| `dgl` | `>=2.1,<2.2` | Required by GraphMAE2 |
+| `dgl` | `2.1.0+cu121` | Required by GraphMAE2. The CUDA build is only on `data.dgl.ai`, which `pyproject.toml` sets as the index for `dgl` |
 | `spacy` / `en_core_web_sm` | `3.7.x` / `3.7.1` | Python 3.9 wheels and thinc ABI compatibility |
 | `numpy` | `<2` | Required by the spaCy/thinc versions above |
 
@@ -46,8 +46,7 @@ git clone https://github.com/THUDM/GraphMAE2.git core/GraphMAE2
 git -C core/GraphMAE2 checkout bc473e8
 
 # 2. Python environment
-uv sync                    # runtime + dev
-uv sync --group research   # also needed for experiments (datasets, Louvain/Leiden)
+uv sync --group research   # runtime + dev + experiment deps (datasets, Louvain/Leiden)
 
 # 3. Cython extensions (trie, co-occurrence counting)
 cd core/entities && uv run python _cython_setup.py build_ext --inplace && cd ../..
@@ -140,6 +139,13 @@ artifacts/experiments/
         ├── experiment_summary.json
         └── semgraph/               # full pipeline artifacts
 ```
+
+GPU runs with the same seed give the same cluster assignments, so NPMI and
+modularity match exactly. Metrics computed from the embedding values
+(Silhouette, Davies–Bouldin, Calinski–Harabasz) can differ around the 7th
+significant digit, because DGL's CUDA kernels do not add numbers in a fixed
+order. CPU and GPU runs of the same seed give different results. Do not mix
+them in one table.
 
 Each run reports Silhouette, Davies–Bouldin, Calinski–Harabasz, NPMI and graph
 modularity for every model. It also compares the SemGraph word clusters with

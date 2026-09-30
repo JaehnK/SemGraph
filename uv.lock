@@ -698,8 +698,8 @@ wheels = [
 
 [[package]]
 name = "dgl"
-version = "2.1.0"
-source = { registry = "https://pypi.org/simple" }
+version = "2.1.0+cu121"
+source = { registry = "https://data.dgl.ai/wheels/cu121/repo.html" }
 dependencies = [
     { name = "networkx", version = "3.2.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.10.*'" },
@@ -715,18 +715,9 @@ dependencies = [
     { name = "tqdm" },
 ]
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/09/2d/c0a40c0d78a8e9c0c43e7f6e4aebebb39c8bf0f80380db2c1f1ba9f3bdfa/dgl-2.1.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:ff74c7119cb1e87c1b06293eba8c22725594517062e74659b1a8636134b16974", size = 6889468, upload-time = "2024-03-05T07:16:21.004Z" },
-    { url = "https://files.pythonhosted.org/packages/89/19/08b77e50de7beb9c011905167ab38ecee759a796447ed7ad466484eafb53/dgl-2.1.0-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:1fda987e01987d655e9a2b16281e1f31759bd5088ce08785422055c71abc0298", size = 7464359, upload-time = "2024-03-05T07:16:24.216Z" },
-    { url = "https://files.pythonhosted.org/packages/ff/45/44fea6e5228602f5d6ad8b4f5a377f5cf5cb5cb6444d9e7cd99150f13fa2/dgl-2.1.0-cp310-cp310-manylinux1_x86_64.whl", hash = "sha256:336e5aed294b9f2f398be332caa0b256e6386e5a6a3a25dfe0715a161e6c4f94", size = 8548990, upload-time = "2024-03-05T07:16:26.655Z" },
-    { url = "https://files.pythonhosted.org/packages/73/72/6bc97419cf8fa1e11420c674fafa3c03e4df9d91bfd8fd802011b5741ce9/dgl-2.1.0-cp310-cp310-manylinux2014_aarch64.whl", hash = "sha256:65f5ae94c4c88433fc4524ab8c431494cfddd8100181d5de6df4ed08aa41d14d", size = 7430720, upload-time = "2024-03-05T07:16:29.505Z" },
-    { url = "https://files.pythonhosted.org/packages/bd/15/6571516b8bdd2f8db29e2739bca7afcd6cf75179b156f72f159a0986c9ed/dgl-2.1.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:fc7ea52fa9d42bf507ccf3b43b6d05c5ee3fce4c614033833ef08aa089b89bc6", size = 6872096, upload-time = "2024-03-05T07:16:31.298Z" },
-    { url = "https://files.pythonhosted.org/packages/7c/48/c62028815d8f1fadff4dc83bbb9bd2e5aa113835bbe14dad92b716d1fd05/dgl-2.1.0-cp311-cp311-macosx_11_0_x86_64.whl", hash = "sha256:994a7dd11d6da251438762e9fb6657ee2bd9715300aa1f11143a0d61be620ec5", size = 7331725, upload-time = "2024-03-05T07:16:33.862Z" },
-    { url = "https://files.pythonhosted.org/packages/15/0b/07c479b28b2b36cbc49f5fa78156fc77f918a4bf5927c9409947d2d3d68d/dgl-2.1.0-cp311-cp311-manylinux1_x86_64.whl", hash = "sha256:050af2b3d54f158be67ae222dbf786b2b35e5d5d6a29fbf2a81b854e99f13adf", size = 8561303, upload-time = "2024-03-05T07:16:36.714Z" },
-    { url = "https://files.pythonhosted.org/packages/0d/28/173f36cae067f17ddb45faa4ee91ca5e31efb194edba667761b53b2e1baf/dgl-2.1.0-cp311-cp311-manylinux2014_aarch64.whl", hash = "sha256:3b54764b7fae40d41eb936bbfe9f254b1b11ed4993d8c61be8e81d09d955f72a", size = 7443820, upload-time = "2024-03-05T07:16:40.077Z" },
-    { url = "https://files.pythonhosted.org/packages/99/50/7ff02953be95efd96d944f6fb4f3faad3182d1bfd9d3fcb98d0a458aad3e/dgl-2.1.0-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:6409e7db20a0e9d60f2c138e958679ccaca5d11c6cc89edcba2ec3018954e799", size = 6889467, upload-time = "2024-03-05T07:17:03.031Z" },
-    { url = "https://files.pythonhosted.org/packages/bf/a7/9b355d311c2586b42a9459e14031612fbc0b692d4a2ce2960f9f2e314114/dgl-2.1.0-cp39-cp39-macosx_11_0_x86_64.whl", hash = "sha256:becd0b1e96fa586b9e72d7c820907276e8c531080bfcb189a2458213f0e357da", size = 7464358, upload-time = "2024-03-05T07:17:05.066Z" },
-    { url = "https://files.pythonhosted.org/packages/f6/e2/404709573ed00fb1f175acfc28b0e294f05bf12ec7d3f7954e5ddbe9fe55/dgl-2.1.0-cp39-cp39-manylinux1_x86_64.whl", hash = "sha256:68f86795b1d93ed93bfaa4940c6219b72c8c3d66638ed61121243d3cc658dcfe", size = 8549094, upload-time = "2024-03-05T07:17:06.946Z" },
-    { url = "https://files.pythonhosted.org/packages/40/fd/3d7f89c6413786f96065a46bb66be343c92cfc4f61f75e365da534a94a93/dgl-2.1.0-cp39-cp39-manylinux2014_aarch64.whl", hash = "sha256:4cf1b1fe41be0be30dcf481ec13f5c1d9daf23ab2e6f2ac116398edc9da63ad7", size = 7431777, upload-time = "2024-03-05T07:17:10.073Z" },
+    { url = "https://data.dgl.ai/wheels/cu121/dgl-2.1.0%2Bcu121-cp310-cp310-manylinux1_x86_64.whl" },
+    { url = "https://data.dgl.ai/wheels/cu121/dgl-2.1.0%2Bcu121-cp311-cp311-manylinux1_x86_64.whl" },
+    { url = "https://data.dgl.ai/wheels/cu121/dgl-2.1.0%2Bcu121-cp39-cp39-manylinux1_x86_64.whl" },
 ]
 
 [[package]]
@@ -3103,7 +3094,7 @@ requires-dist = [
     { name = "colorama", specifier = ">=0.4.6" },
     { name = "contractions", specifier = ">=0.1.73" },
     { name = "cython", specifier = ">=3.0" },
-    { name = "dgl", specifier = ">=2.1,<2.2" },
+    { name = "dgl", specifier = ">=2.1,<2.2", index = "https://data.dgl.ai/wheels/cu121/repo.html" },
     { name = "en-core-web-sm", url = "https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl" },
     { name = "kneed", specifier = ">=0.8.5" },
     { name = "matplotlib", specifier = ">=3.8" },
