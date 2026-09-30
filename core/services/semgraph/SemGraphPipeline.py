@@ -28,17 +28,24 @@ if TYPE_CHECKING:
     from ..Graph.GraphService import GraphService
     from ..Graph.NodeFeatureHandler import NodeFeatureHandler
     from entities import WordGraph
+    from ..ports import RepresentationLearner
 
 
 class SemGraphPipeline:
     """SemGraph 파이프라인 오케스트레이터"""
 
-    def __init__(self, config: SemGraphConfig):
+    def __init__(
+        self,
+        config: SemGraphConfig,
+        representation_learner: Optional["RepresentationLearner"] = None,
+    ):
         """
         Args:
             config: SemGraph 파이프라인 설정
+            representation_learner: 노드 표현 학습기 (None이면 GraphMAE adapter 사용)
         """
         self.config = config
+        self.representation_learner = representation_learner
         from ..clustering import SphericalKMeansClusteringService
         from ..Metric import MetricsService
 
@@ -234,23 +241,10 @@ class SemGraphPipeline:
     # 4. GraphMAE 자기지도학습
     # ============================================================
 
-    def _default_graph_device(self) -> str:
-        """CUDA only when both torch and the installed DGL build support it."""
-        if not torch.cuda.is_available():
-            return "cpu"
-
-        import dgl
-
-        try:
-            dgl.graph(([0], [0])).to("cuda")
-        except dgl.DGLError:
-            self._log("  ⚠️ 설치된 DGL이 CUDA를 지원하지 않아 GraphMAE를 CPU로 학습합니다.")
-            return "cpu"
-        return "cuda"
-
     def train_graphmae(self) -> None:
         """GraphMAE 사전학습 및 임베딩 추출"""
-        from ..GraphMAE import GraphMAEService, GraphMAEConfig
+        from ..GraphMAE import GraphMAEConfig
+        from ..adapters.graphmae_representation_learner import GraphMAERepresentationLearner
 
         if self.word_graph is None or self.graph_service is None:
             raise RuntimeError("WordGraph가 생성되지 않았습니다.")
@@ -268,51 +262,26 @@ class SemGraphPipeline:
         mae_config.mask_rate = self.config.mask_rate
         mae_config.encoder_type = self.config.encoder_type
         mae_config.decoder_type = self.config.decoder_type
-        mae_config.device = self.config.graphmae_device or self._default_graph_device()
+        mae_config.device = (
+            self.config.graphmae_device
+            or GraphMAERepresentationLearner.default_device(log=self._log)
+        )
 
         self._log(f"  학습 설정: {mae_config.max_epochs} epochs, device: {mae_config.device}")
         self._log(f"  Encoder: {mae_config.encoder_type}, Decoder: {mae_config.decoder_type}")
         if torch.cuda.is_available() and mae_config.device == "cuda":
             self._log(f"  GPU: {torch.cuda.get_device_name(0)}")
 
-        # GraphMAE 서비스 초기화
-        mae_service = GraphMAEService(self.graph_service, mae_config)
-
-        # DGL 그래프로 변환
-        dgl_graph = self.graph_service.wordgraph_to_dgl(
+        learner = self.representation_learner or GraphMAERepresentationLearner(
+            self.graph_service,
+            mae_config,
+            random_seed=self.config.random_seed,
+            log_interval=self.config.log_interval,
+            log=self._log,
+        )
+        self.graphmae_embeddings = learner.fit_transform(
             self.word_graph, self.word_graph.node_features
         )
-
-        # 모델 생성 및 학습
-        mae_service.model = mae_service.create_mae_model(embed_size, random_seed=self.config.random_seed)
-        device_obj = torch.device(mae_config.device)
-        mae_service.model.to(device_obj)
-        dgl_graph = dgl_graph.to(device_obj)
-
-        optimizer = torch.optim.Adam(
-            mae_service.model.parameters(),
-            lr=mae_config.learning_rate,
-            weight_decay=mae_config.weight_decay
-        )
-
-        # 학습 루프
-        mae_service.model.train()
-        for epoch in range(mae_config.max_epochs):
-            optimizer.zero_grad()
-            x = dgl_graph.ndata['feat']
-            loss = mae_service.model(dgl_graph, x, epoch=epoch)
-            loss.backward()
-            optimizer.step()
-
-            if (epoch + 1) % self.config.log_interval == 0:
-                self._log(f"  Epoch {epoch + 1}/{mae_config.max_epochs}, Loss: {loss.item():.4f}")
-
-        # 임베딩 추출
-        mae_service.model.eval()
-        with torch.no_grad():
-            self.graphmae_embeddings = mae_service.model.embed(dgl_graph, dgl_graph.ndata['feat'])
-
-        self.graphmae_embeddings = self.graphmae_embeddings.cpu()
         self._log(f"  GraphMAE 임베딩 추출 완료: {self.graphmae_embeddings.shape}")
 
     # ============================================================
